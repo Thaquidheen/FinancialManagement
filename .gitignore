@@ -1,0 +1,307 @@
+# =============================================================================
+# .gitignore for ERP Backend Spring Boot Project
+# Based on your current project structure
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# Maven Build Directory (YOUR MAIN ISSUE)
+# -----------------------------------------------------------------------------
+target/
+!.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# -----------------------------------------------------------------------------
+# Java Compiled Files
+# -----------------------------------------------------------------------------
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+
+# JAR files (including your large Spring Boot JAR)
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+
+# -----------------------------------------------------------------------------
+# IDE Files (.idea directory you have)
+# -----------------------------------------------------------------------------
+# IntelliJ IDEA
+.idea/
+*.iws
+*.iml
+*.ipr
+out/
+.idea_modules/
+atlassian-ide-plugin.xml
+
+# Eclipse
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+.metadata
+.recommenders
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# -----------------------------------------------------------------------------
+# Logs Directory (logs folder you have)
+# -----------------------------------------------------------------------------
+logs/
+*.log
+*.log.*
+log/
+application.log
+spring.log
+error.log
+access.log
+debug.log
+
+# Logback temp files
+*.log.tmp
+*.log.gz
+
+# -----------------------------------------------------------------------------
+# Maven Specific
+# -----------------------------------------------------------------------------
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+buildNumber.properties
+.mvn/timing.properties
+.mvn/wrapper/maven-wrapper.jar
+
+# -----------------------------------------------------------------------------
+# Spring Boot Specific
+# -----------------------------------------------------------------------------
+# Spring Boot JAR (your main issue file)
+*.jar
+*.war
+
+# Spring Boot DevTools
+.spring-boot-devtools.properties
+
+# Application properties with secrets
+application-secrets.yml
+application-local.yml
+application-*.yml
+!application.yml
+!application-dev.yml
+!application-prod.yml
+
+# -----------------------------------------------------------------------------
+# Database Files
+# -----------------------------------------------------------------------------
+# H2 Database files
+*.db
+*.trace.db
+*.lock.db
+
+# PostgreSQL dumps
+*.sql
+*.dump
+pg_dump_*
+
+# Database migration backups
+db/migration/backup/
+
+# -----------------------------------------------------------------------------
+# Environment & Security
+# -----------------------------------------------------------------------------
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# SSL/TLS certificates
+*.crt
+*.key
+*.pem
+*.p12
+*.jks
+keystore.*
+truststore.*
+
+# JWT keys
+jwt-key*
+private-key*
+public-key*
+
+# API keys
+api-keys.properties
+credentials.json
+service-account-key.json
+
+# -----------------------------------------------------------------------------
+# File Storage & Uploads
+# -----------------------------------------------------------------------------
+# Upload directories (for your document management)
+uploads/
+documents/
+files/
+attachments/
+storage/
+file-storage/
+
+# Bank files (for your payment system)
+bank-files/
+payment-files/
+sarie-files/
+
+# Backup files
+backups/
+backup/
+*.backup
+
+# Temporary files
+temp/
+tmp/
+*.tmp
+
+# -----------------------------------------------------------------------------
+# Docker Files (docker-compose.yml you have)
+# -----------------------------------------------------------------------------
+# Docker override files
+docker-compose.override.yml
+docker-compose.local.yml
+docker-compose.*.yml
+!docker-compose.yml
+!docker-compose.dev.yml
+!docker-compose.prod.yml
+
+# Docker volumes
+docker-volumes/
+.docker/
+
+# -----------------------------------------------------------------------------
+# Testing
+# -----------------------------------------------------------------------------
+# Test reports
+test-results/
+target/surefire-reports/
+target/failsafe-reports/
+junit/
+test-output/
+
+# Coverage reports
+target/site/jacoco/
+*.exec
+coverage/
+
+# -----------------------------------------------------------------------------
+# Operating System Files
+# -----------------------------------------------------------------------------
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+
+# -----------------------------------------------------------------------------
+# Development Tools
+# -----------------------------------------------------------------------------
+# Hot reload
+.hot-reload/
+
+# Debug files
+*.hprof
+*.dump
+hs_err_pid*
+replay_pid*
+
+# Actuator dumps
+heap-dump*
+thread-dump*
+
+# -----------------------------------------------------------------------------
+# Cache Files
+# -----------------------------------------------------------------------------
+.cache/
+cache/
+temp-cache/
+.m2/
+
+# -----------------------------------------------------------------------------
+# Scripts Directory (init-scripts you might have)
+# -----------------------------------------------------------------------------
+# Keep init-scripts but ignore any generated ones
+init-scripts/*.log
+init-scripts/generated/
+init-scripts/temp/
+
+# -----------------------------------------------------------------------------
+# Project Specific (Based on your ERP modules)
+# -----------------------------------------------------------------------------
+# Generated reports
+generated-reports/
+excel-reports/
+pdf-reports/
+
+# User uploads
+profile-images/
+avatars/
+
+# Email templates (compiled)
+target/classes/templates/email/compiled/
+
+# Notification temp files
+notification-temp/
+
+# Payment processing temp
+payment-processing/
+
+# -----------------------------------------------------------------------------
+# Archive Files
+# -----------------------------------------------------------------------------
+*.zip
+*.tar.gz
+*.rar
+*.7z
+
+# -----------------------------------------------------------------------------
+# Misc
+# -----------------------------------------------------------------------------
+*.swp
+*.swo
+*~
+.gradle/

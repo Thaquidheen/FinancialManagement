@@ -1,0 +1,590 @@
+# =============================================================================
+# ERP BACKEND - COMPLETE APPLICATION CONFIGURATION
+# Project Management & Financial Approval System
+# =============================================================================
+
+spring:
+  application:
+    name: erp-backend
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+
+  # Database Configuration
+  datasource:
+    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/erp_db}
+    username: ${DATABASE_USERNAME:erp_user}
+    password: ${DATABASE_PASSWORD:erp_password}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: ${DB_POOL_SIZE:20}
+      minimum-idle: ${DB_MIN_IDLE:5}
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      leak-detection-threshold: 60000
+      pool-name: ERPConnectionPool
+
+  # JPA Configuration
+  jpa:
+    hibernate:
+      ddl-auto: ${JPA_DDL_AUTO:validate}
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+        implicit-strategy: org.hibernate.boot.model.naming.ImplicitNamingStrategyLegacyJpaImpl
+    show-sql: ${JPA_SHOW_SQL:false}
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+        use_sql_comments: false
+        jdbc:
+          batch_size: 25
+          order_inserts: true
+          order_updates: true
+        cache:
+          use_second_level_cache: true
+          region:
+            factory_class: org.hibernate.cache.jcache.JCacheRegionFactory
+    open-in-view: false
+    defer-datasource-initialization: false
+
+  # Transaction Configuration
+  transaction:
+    rollback-on-commit-failure: true
+    default-timeout: 30
+
+  # Cache Configuration
+  cache:
+    type: caffeine
+    caffeine:
+      spec: maximumSize=1000,expireAfterWrite=300s
+
+  # Redis Configuration (for distributed caching - optional)
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      timeout: 2000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-idle: 8
+          min-idle: 0
+
+  # File Upload Configuration
+  servlet:
+    context-path: /api
+    multipart:
+      enabled: true
+      max-file-size: ${MAX_FILE_SIZE:10MB}
+      max-request-size: ${MAX_REQUEST_SIZE:50MB}
+      location: ${TEMP_UPLOAD_DIR:/tmp}
+      resolve-lazily: false
+
+  # Flyway Database Migration
+  flyway:
+    enabled: ${FLYWAY_ENABLED:true}
+    baseline-on-migrate: true
+    validate-on-migrate: true
+    clean-disabled: true
+    locations: classpath:db/migration
+    table: flyway_schema_history
+    baseline-version: 1
+    baseline-description: Initial Setup
+    out-of-order: false
+    ignore-missing-migrations: false
+
+  # Mail Configuration
+  mail:
+    host: ${MAIL_HOST:smtp.gmail.com}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    protocol: smtp
+    test-connection: false
+    default-encoding: UTF-8
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 3000
+          writetimeout: 5000
+
+  # Jackson JSON Configuration
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+      fail-on-empty-beans: false
+    deserialization:
+      fail-on-unknown-properties: false
+      accept-single-value-as-array: true
+    default-property-inclusion: NON_NULL
+    time-zone: Asia/Riyadh
+
+  # Security Configuration
+  security:
+    require-ssl: ${REQUIRE_SSL:false}
+
+  # Task Execution Configuration
+  task:
+    execution:
+      pool:
+        core-size: 5
+        max-size: 20
+        queue-capacity: 100
+        keep-alive: 60s
+      thread-name-prefix: erp-task-
+
+  # Task Scheduling Configuration
+    scheduling:
+      pool:
+        size: 5
+      thread-name-prefix: erp-scheduler-
+
+  # Web Configuration
+  web:
+    resources:
+      add-mappings: false
+
+# =============================================================================
+# SERVER CONFIGURATION
+# =============================================================================
+
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /api
+    session:
+      timeout: 30m
+      cookie:
+        max-age: 1800
+        http-only: true
+        secure: ${COOKIE_SECURE:false}
+  compression:
+    enabled: true
+    mime-types: text/html,text/xml,text/plain,text/css,text/javascript,application/javascript,application/json,application/xml
+    min-response-size: 1024
+  error:
+    include-message: always
+    include-binding-errors: always
+    include-stacktrace: on_param
+    whitelabel:
+      enabled: false
+  forward-headers-strategy: framework
+  max-http-header-size: 8KB
+  tomcat:
+    max-connections: 8192
+    max-threads: 200
+    min-spare-threads: 10
+    connection-timeout: 20000
+    accept-count: 100
+    uri-encoding: UTF-8
+
+# =============================================================================
+# APPLICATION SPECIFIC CONFIGURATION
+# =============================================================================
+
+app:
+  # JWT Configuration
+  jwt:
+    secret: ${JWT_SECRET:mySecretKey123456789012345678901234567890123456789012345678901234567890}
+    expiration: ${JWT_EXPIRATION:86400000} # 24 hours in milliseconds
+    refresh-expiration: ${JWT_REFRESH_EXPIRATION:604800000} # 7 days in milliseconds
+    issuer: ${JWT_ISSUER:erp-backend}
+    audience: ${JWT_AUDIENCE:erp-users}
+    header: Authorization
+    prefix: "Bearer "
+
+  # File Storage Configuration
+  file:
+    upload-dir: ${FILE_UPLOAD_DIR:./uploads}
+    max-file-size: ${MAX_FILE_SIZE:10MB}
+    allowed-types: ${ALLOWED_FILE_TYPES:jpg,jpeg,png,gif,pdf,doc,docx,xls,xlsx,txt}
+    virus-scan-enabled: ${VIRUS_SCAN_ENABLED:false}
+    storage-type: ${STORAGE_TYPE:local} # local, s3, azure
+
+    # S3 Configuration (if using S3 storage)
+    s3:
+      bucket-name: ${S3_BUCKET_NAME:erp-documents}
+      region: ${S3_REGION:us-east-1}
+      access-key: ${S3_ACCESS_KEY:}
+      secret-key: ${S3_SECRET_KEY:}
+
+  # CORS Configuration
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173,http://localhost:4200}
+    allowed-methods: ${CORS_ALLOWED_METHODS:GET,POST,PUT,PATCH,DELETE,OPTIONS}
+    allowed-headers: ${CORS_ALLOWED_HEADERS:*}
+    exposed-headers: ${CORS_EXPOSED_HEADERS:X-Total-Count,X-Total-Pages}
+    allow-credentials: ${CORS_ALLOW_CREDENTIALS:true}
+    max-age: ${CORS_MAX_AGE:3600}
+
+  # Security Configuration
+  security:
+    password:
+      min-length: ${PASSWORD_MIN_LENGTH:8}
+      require-uppercase: ${PASSWORD_REQUIRE_UPPERCASE:true}
+      require-lowercase: ${PASSWORD_REQUIRE_LOWERCASE:true}
+      require-numbers: ${PASSWORD_REQUIRE_NUMBERS:true}
+      require-special-chars: ${PASSWORD_REQUIRE_SPECIAL:true}
+    session:
+      max-concurrent: ${MAX_CONCURRENT_SESSIONS:5}
+      prevent-login-if-max: ${PREVENT_LOGIN_IF_MAX:false}
+    lockout:
+      max-attempts: ${MAX_LOGIN_ATTEMPTS:5}
+      lockout-duration: ${LOCKOUT_DURATION:300} # 5 minutes in seconds
+
+  # Business Configuration
+  business:
+    currency:
+      default: ${DEFAULT_CURRENCY:SAR}
+      supported: ${SUPPORTED_CURRENCIES:SAR,USD,EUR}
+
+    budget:
+      warning-threshold: ${BUDGET_WARNING_THRESHOLD:80.00} # 80%
+      critical-threshold: ${BUDGET_CRITICAL_THRESHOLD:90.00} # 90%
+      alert-frequency: ${BUDGET_ALERT_FREQUENCY:DAILY} # DAILY, WEEKLY
+      auto-approval-limit: ${AUTO_APPROVAL_LIMIT:1000.00} # SAR
+
+    quotation:
+      validity-days: ${QUOTATION_VALIDITY_DAYS:30}
+      max-items: ${MAX_QUOTATION_ITEMS:50}
+      require-approval-above: ${REQUIRE_APPROVAL_ABOVE:5000.00} # SAR
+
+    project:
+      default-duration-months: ${DEFAULT_PROJECT_DURATION:12}
+      max-budget: ${MAX_PROJECT_BUDGET:10000000.00} # SAR
+      budget-variance-threshold: ${BUDGET_VARIANCE_THRESHOLD:10.00} # 10%
+
+  # Notification Configuration
+  notification:
+    email:
+      enabled: ${EMAIL_NOTIFICATIONS_ENABLED:true}
+      from-address: ${EMAIL_FROM_ADDRESS:noreply@company.com}
+      from-name: ${EMAIL_FROM_NAME:ERP System}
+      template-path: ${EMAIL_TEMPLATE_PATH:classpath:/templates/email/}
+
+    sms:
+      enabled: ${SMS_NOTIFICATIONS_ENABLED:true}
+      provider: ${SMS_PROVIDER:saudi_sms} # saudi_sms, twilio, aws_sns
+      sender-id: ${SMS_SENDER_ID:ERP}
+
+      # Saudi SMS Gateway Configuration
+      saudi-sms:
+        username: ${SAUDI_SMS_USERNAME:}
+        password: ${SAUDI_SMS_PASSWORD:}
+        sender: ${SAUDI_SMS_SENDER:}
+        url: ${SAUDI_SMS_URL:https://www.sms.net.sa/sendsms.php}
+
+    push:
+      enabled: ${PUSH_NOTIFICATIONS_ENABLED:false}
+      firebase:
+        service-account-key: ${FIREBASE_SERVICE_ACCOUNT_KEY:}
+
+  # Payment Configuration
+  payment:
+    bank-file:
+      format: ${BANK_FILE_FORMAT:SARIE} # SARIE, SWIFT
+      output-directory: ${BANK_FILE_OUTPUT_DIR:./bank-files}
+      encryption-enabled: ${BANK_FILE_ENCRYPTION:false}
+
+    sarie:
+      sender-id: ${SARIE_SENDER_ID:}
+      bank-code: ${SARIE_BANK_CODE:}
+      branch-code: ${SARIE_BRANCH_CODE:}
+
+  # API Configuration
+  api:
+    version: ${API_VERSION:v1}
+    rate-limit:
+      enabled: ${RATE_LIMIT_ENABLED:true}
+      requests-per-minute: ${RATE_LIMIT_RPM:60}
+      burst-capacity: ${RATE_LIMIT_BURST:100}
+
+    pagination:
+      default-size: ${DEFAULT_PAGE_SIZE:20}
+      max-size: ${MAX_PAGE_SIZE:100}
+
+  # Audit Configuration
+  audit:
+    enabled: ${AUDIT_ENABLED:true}
+    retain-days: ${AUDIT_RETAIN_DAYS:365}
+    exclude-paths: ${AUDIT_EXCLUDE_PATHS:/actuator,/swagger-ui,/api-docs}
+
+  # Backup Configuration
+  backup:
+    enabled: ${BACKUP_ENABLED:false}
+    schedule: ${BACKUP_SCHEDULE:0 0 2 * * ?} # Daily at 2 AM
+    retention-days: ${BACKUP_RETENTION_DAYS:30}
+    location: ${BACKUP_LOCATION:./backups}
+
+# =============================================================================
+# LOGGING CONFIGURATION
+# =============================================================================
+
+logging:
+  level:
+    root: ${LOG_LEVEL_ROOT:INFO}
+    com.company.erp: ${LOG_LEVEL_APP:DEBUG}
+    org.springframework.security: ${LOG_LEVEL_SECURITY:INFO}
+    org.springframework.web: ${LOG_LEVEL_WEB:INFO}
+    org.springframework.transaction: ${LOG_LEVEL_TRANSACTION:INFO}
+    org.hibernate.SQL: ${LOG_LEVEL_SQL:DEBUG}
+    org.hibernate.type.descriptor.sql.BasicBinder: ${LOG_LEVEL_SQL_PARAMS:TRACE}
+    org.springframework.data.jpa: ${LOG_LEVEL_JPA:INFO}
+    org.springframework.cache: ${LOG_LEVEL_CACHE:INFO}
+    org.springframework.scheduling: ${LOG_LEVEL_SCHEDULING:INFO}
+    com.zaxxer.hikari: ${LOG_LEVEL_HIKARI:INFO}
+    org.flywaydb: ${LOG_LEVEL_FLYWAY:INFO}
+
+  pattern:
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level [%X{traceId},%X{spanId}] %logger{36} - %msg%n"
+    console: "%clr(%d{HH:mm:ss.SSS}){faint} %clr([%thread]){blue} %clr(%-5level){color} [%X{traceId},%X{spanId}] %clr(%logger{36}){cyan} - %msg%n"
+
+  file:
+    name: ${LOG_FILE_NAME:./logs/erp-backend.log}
+    max-size: ${LOG_FILE_MAX_SIZE:100MB}
+    max-history: ${LOG_FILE_MAX_HISTORY:30}
+    total-size-cap: ${LOG_TOTAL_SIZE_CAP:1GB}
+
+  logback:
+    rollingpolicy:
+      file-name-pattern: ${LOG_FILE_PATTERN:./logs/erp-backend.%d{yyyy-MM-dd}.%i.log}
+      max-file-size: ${LOG_MAX_FILE_SIZE:100MB}
+      max-history: ${LOG_MAX_HISTORY:30}
+      total-size-cap: ${LOG_TOTAL_SIZE:1GB}
+
+# =============================================================================
+# ACTUATOR & MONITORING CONFIGURATION
+# =============================================================================
+
+management:
+  endpoints:
+    enabled-by-default: false
+    web:
+      exposure:
+        include: ${ACTUATOR_ENDPOINTS:health,info,metrics,prometheus,env}
+      base-path: /management
+      path-mapping:
+        prometheus: metrics
+    jmx:
+      exposure:
+        exclude: "*"
+
+  endpoint:
+    health:
+      enabled: true
+      show-details: ${ACTUATOR_HEALTH_DETAILS:when-authorized}
+      show-components: when-authorized
+      group:
+        readiness:
+          include: readinessState,db,diskSpace
+        liveness:
+          include: livenessState,ping
+
+    info:
+      enabled: true
+
+    metrics:
+      enabled: ${ACTUATOR_METRICS_ENABLED:true}
+
+    prometheus:
+      enabled: ${PROMETHEUS_ENABLED:true}
+
+    env:
+      enabled: ${ACTUATOR_ENV_ENABLED:false}
+      show-values: never
+
+  health:
+    mail:
+      enabled: true
+    redis:
+      enabled: ${REDIS_HEALTH_CHECK:false}
+    db:
+      enabled: true
+    diskspace:
+      enabled: true
+      threshold: 10MB
+
+  metrics:
+    export:
+      prometheus:
+        enabled: ${PROMETHEUS_ENABLED:true}
+    web:
+      server:
+        request:
+          autotime:
+            enabled: true
+    jdbc:
+      datasource:
+        metric-name: erp.datasource
+    jvm:
+      enabled: true
+
+  info:
+    env:
+      enabled: true
+    build:
+      enabled: true
+    git:
+      enabled: true
+      mode: full
+
+# =============================================================================
+# SWAGGER/OPENAPI CONFIGURATION
+# =============================================================================
+
+springdoc:
+  api-docs:
+    enabled: ${SWAGGER_ENABLED:true}
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: ${SWAGGER_ENABLED:true}
+    path: /swagger-ui.html
+    config-url: /v3/api-docs/swagger-config
+    urls-primary-name: ERP API
+    display-request-duration: true
+    default-models-expand-depth: 1
+    default-model-expand-depth: 1
+  show-actuator: false
+  group-configs:
+    - group: 'erp-api'
+      paths-to-match: '/api/**'
+
+# =============================================================================
+# CUSTOM PROPERTIES FOR DIFFERENT ENVIRONMENTS
+# =============================================================================
+
+---
+# Development Profile
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+  # Development Database
+  datasource:
+    url: jdbc:postgresql://localhost:5432/erp_dev
+    username: erp_dev_user
+    password: erp_dev_password
+
+  # Development JPA Settings
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+  # Development Mail (Console Output)
+  mail:
+    host: localhost
+    port: 1025 # MailHog for local testing
+
+app:
+  security:
+    lockout:
+      max-attempts: 10 # More lenient for development
+
+logging:
+  level:
+    com.company.erp: DEBUG
+    org.springframework.security: DEBUG
+
+---
+# Testing Profile
+spring:
+  config:
+    activate:
+      on-profile: test
+
+  # Test Database (H2 In-Memory)
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    database-platform: org.hibernate.dialect.H2Dialect
+
+  # Disable Flyway for tests
+  flyway:
+    enabled: false
+
+  # Test specific configurations
+  mail:
+    host: localhost
+    port: 3025
+
+app:
+  notification:
+    email:
+      enabled: false
+    sms:
+      enabled: false
+
+logging:
+  level:
+    root: WARN
+    com.company.erp: DEBUG
+
+---
+# Production Profile
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  # Production Database
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+    hikari:
+      maximum-pool-size: 30
+      minimum-idle: 10
+
+  # Production JPA Settings
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+  # Production Mail Settings
+  mail:
+    host: ${PROD_MAIL_HOST}
+    username: ${PROD_MAIL_USERNAME}
+    password: ${PROD_MAIL_PASSWORD}
+
+server:
+  servlet:
+    session:
+      cookie:
+        secure: true
+        http-only: true
+
+app:
+  security:
+    lockout:
+      max-attempts: 3 # Stricter for production
+  file:
+    upload-dir: ./uploads
+    max-file-size: 10MB
+    allowed-types: jpg,jpeg,png,gif,pdf,doc,docx,xls,xlsx,txt
+    storage-type: local
+    compression-enabled: true
+    generate-thumbnails: true
+    thumbnail-size: 200
+    virus-scan-enabled: false
+logging:
+  level:
+    root: INFO
+    com.company.erp: INFO
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
