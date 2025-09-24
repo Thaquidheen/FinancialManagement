@@ -2,8 +2,8 @@ spring:
   # Database Configuration
   datasource:
     url: jdbc:postgresql://localhost:5432/erp_dev
-    username: erp_user
-    password: erp_password
+    username: postgres
+    password: password
     driver-class-name: org.postgresql.Driver
     hikari:
       maximum-pool-size: 20

@@ -11,13 +11,13 @@ spring:
 
   # Database Configuration
   datasource:
-    url: ${DATABASE_URL:jdbc:postgresql://localhost:5432/erp_db}
-    username: ${DATABASE_USERNAME:erp_user}
-    password: ${DATABASE_PASSWORD:erp_password}
+    url: jdbc:postgresql://localhost:5432/erp_dev
+    username: postgres
+    password: password
     driver-class-name: org.postgresql.Driver
     hikari:
-      maximum-pool-size: ${DB_POOL_SIZE:20}
-      minimum-idle: ${DB_MIN_IDLE:5}
+      maximum-pool-size: 20
+      minimum-idle: 5
       connection-timeout: 30000
       idle-timeout: 600000
       max-lifetime: 1800000
@@ -93,6 +93,7 @@ spring:
     baseline-version: 1
     baseline-description: Initial Setup
     out-of-order: false
+    placeholder-replacement: false
     ignore-missing-migrations: false
 
   # Mail Configuration
@@ -470,8 +471,8 @@ spring:
   # Development Database
   datasource:
     url: jdbc:postgresql://localhost:5432/erp_dev
-    username: erp_dev_user
-    password: erp_dev_password
+    username: postgres
+    password: password
 
   # Development JPA Settings
   jpa:
@@ -555,6 +556,11 @@ spring:
     hibernate:
       ddl-auto: validate
     show-sql: false
+    properties:
+      hibernate:
+        cache:
+          use_second_level_cache: false
+          use_query_cache: false
 
   # Production Mail Settings
   mail:

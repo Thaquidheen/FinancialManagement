@@ -2,7 +2,7 @@
 -- Create quotation system tables
 
 -- Quotations table
-CREATE TABLE quotations (
+CREATE TABLE IF NOT EXISTS quotations (
                             id BIGSERIAL PRIMARY KEY,
                             project_id BIGINT NOT NULL,
                             created_by BIGINT NOT NULL,
@@ -30,7 +30,7 @@ CREATE TABLE quotations (
 );
 
 -- Quotation items table
-CREATE TABLE quotation_items (
+CREATE TABLE IF NOT EXISTS quotation_items (
                                  id BIGSERIAL PRIMARY KEY,
                                  quotation_id BIGINT NOT NULL,
                                  description TEXT NOT NULL,
@@ -53,9 +53,9 @@ CREATE TABLE quotation_items (
 );
 
 -- Create indexes for better performance
-CREATE INDEX idx_quotations_project_id ON quotations(project_id);
-CREATE INDEX idx_quotations_created_by ON quotations(created_by);
-CREATE INDEX idx_quotations_status ON quotations(status);
-CREATE INDEX idx_quotations_created_date ON quotations(created_date);
-CREATE INDEX idx_quotation_items_quotation_id ON quotation_items(quotation_id);
-CREATE INDEX idx_quotation_items_item_order ON quotation_items(item_order);
+CREATE INDEX IF NOT EXISTS idx_quotations_project_id ON quotations(project_id);
+CREATE INDEX IF NOT EXISTS idx_quotations_created_by ON quotations(created_by);
+CREATE INDEX IF NOT EXISTS idx_quotations_status ON quotations(status);
+CREATE INDEX IF NOT EXISTS idx_quotations_created_date ON quotations(created_date);
+CREATE INDEX IF NOT EXISTS idx_quotation_items_quotation_id ON quotation_items(quotation_id);
+CREATE INDEX IF NOT EXISTS idx_quotation_items_item_order ON quotation_items(item_order);

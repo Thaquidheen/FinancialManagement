@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # PostgreSQL Database
   postgres:
@@ -7,8 +5,8 @@ services:
     container_name: erp-postgres
     environment:
       POSTGRES_DB: erp_dev
-      POSTGRES_USER: erp_user
-      POSTGRES_PASSWORD: erp_password
+      POSTGRES_USER: postgres  # Changed from erp_user
+      POSTGRES_PASSWORD: password  # Changed from erp_password
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
     ports:
       - "5432:5432"
@@ -18,24 +16,49 @@ services:
     networks:
       - erp-network
     restart: unless-stopped
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d erp_dev" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
-  # pgAdmin for database management (optional)
-  pgadmin:
-    image: dpage/pgadmin4:latest
-    container_name: erp-pgadmin
+  erp-backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: erp-backend
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@company.com
-      PGADMIN_DEFAULT_PASSWORD: admin123
-      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      - SPRING_PROFILES_ACTIVE=prod
+      - DATABASE_URL=jdbc:postgresql://postgres:5432/erp_dev
+      - DATABASE_USERNAME=postgres
+      - DATABASE_PASSWORD=password
+      - SERVER_PORT=8080
     ports:
-      - "5050:80"
-    volumes:
-      - pgadmin_data:/var/lib/pgadmin
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks:
       - erp-network
-    depends_on:
-      - postgres
     restart: unless-stopped
+
+    # pgAdmin for database management (optional)
+  pgadmin:
+      image: dpage/pgadmin4:latest
+      container_name: erp-pgadmin
+      environment:
+        PGADMIN_DEFAULT_EMAIL: admin@company.com
+        PGADMIN_DEFAULT_PASSWORD: admin123
+        PGADMIN_CONFIG_SERVER_MODE: 'False'
+      ports:
+        - "5050:80"
+      volumes:
+        - pgadmin_data:/var/lib/pgadmin
+      networks:
+        - erp-network
+      depends_on:
+        - postgres
+      restart: unless-stopped
 
 volumes:
   postgres_data:

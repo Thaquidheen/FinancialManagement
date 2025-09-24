@@ -1,14 +1,40 @@
 -- V9__Enhanced_notifications_system.sql
 -- Create enhanced notification system tables for Phase 8
 
+-- Base notifications table (created if missing so ALTER below succeeds)
+CREATE TABLE IF NOT EXISTS notifications (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    message TEXT NOT NULL,
+    read BOOLEAN DEFAULT FALSE,
+    sent BOOLEAN DEFAULT FALSE,
+    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Update notifications table with enhanced fields
-ALTER TABLE notifications
+ALTER TABLE IF EXISTS notifications
     ADD COLUMN IF NOT EXISTS priority VARCHAR(20) DEFAULT 'MEDIUM',
     ADD COLUMN IF NOT EXISTS channel VARCHAR(20) DEFAULT 'IN_APP',
     ADD COLUMN IF NOT EXISTS scheduled_time TIMESTAMP,
     ADD COLUMN IF NOT EXISTS action_url VARCHAR(500),
     ADD COLUMN IF NOT EXISTS retry_count INTEGER DEFAULT 0,
     ADD COLUMN IF NOT EXISTS error_message TEXT;
+
+-- Ensure notification_templates exists for seed data below
+CREATE TABLE IF NOT EXISTS notification_templates (
+    id BIGSERIAL PRIMARY KEY,
+    type VARCHAR(50) NOT NULL UNIQUE,
+    name VARCHAR(100) NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    email_subject VARCHAR(255),
+    email_body TEXT,
+    sms_template VARCHAR(500),
+    in_app_template TEXT,
+    active BOOLEAN DEFAULT TRUE,
+    language VARCHAR(5) DEFAULT 'en'
+);
 
 -- Create notification template data table
 CREATE TABLE IF NOT EXISTS notification_template_data (
@@ -67,7 +93,17 @@ CREATE TABLE IF NOT EXISTS sms_logs (
     );
 
 -- Enhanced document management
-ALTER TABLE documents
+-- Create minimal documents table if missing to support alterations and indexes below
+CREATE TABLE IF NOT EXISTS documents (
+    id BIGSERIAL PRIMARY KEY,
+    project_id BIGINT,
+    category VARCHAR(50),
+    checksum VARCHAR(64),
+    deleted BOOLEAN DEFAULT FALSE,
+    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+ALTER TABLE IF EXISTS documents
     ADD COLUMN IF NOT EXISTS access_count INTEGER DEFAULT 0,
     ADD COLUMN IF NOT EXISTS last_accessed_date TIMESTAMP,
     ADD COLUMN IF NOT EXISTS checksum VARCHAR(64),
@@ -89,8 +125,17 @@ CREATE TABLE IF NOT EXISTS document_tag_assignments (
     PRIMARY KEY (document_id, tag_id)
     );
 
+-- Ensure document_metadata base table exists
+CREATE TABLE IF NOT EXISTS document_metadata (
+    id BIGSERIAL PRIMARY KEY,
+    document_id BIGINT NOT NULL UNIQUE REFERENCES documents(id) ON DELETE CASCADE,
+    extracted_text TEXT,
+    indexed BOOLEAN DEFAULT FALSE,
+    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Update document_metadata table
-ALTER TABLE document_metadata
+ALTER TABLE IF EXISTS document_metadata
     ADD COLUMN IF NOT EXISTS extracted_text TEXT,
     ADD COLUMN IF NOT EXISTS indexed BOOLEAN DEFAULT FALSE;
 
@@ -108,31 +153,29 @@ CREATE INDEX IF NOT EXISTS idx_documents_checksum ON documents(checksum);
 
 CREATE INDEX IF NOT EXISTS idx_document_metadata_indexed ON document_metadata(indexed);
 
--- Insert default notification templates
 INSERT INTO notification_templates (type, name, title, email_subject, email_body, sms_template, in_app_template, active, language)
 VALUES
     ('QUOTATION_SUBMITTED', 'Quotation Submitted', 'New Quotation Submitted',
-     'New Quotation Submitted - ${projectName}',
-     'A new quotation has been submitted for project ${projectName} by ${submittedBy}. Please review and approve.',
-     'New quotation submitted for ${projectName}. Please review.',
-     'New quotation submitted for ${projectName} by ${submittedBy}',
+     'New Quotation Submitted - $${projectName}',
+     'A new quotation has been submitted for project $${projectName} by $${submittedBy}. Please review and approve.',
+     'New quotation submitted for $${projectName}. Please review.',
+     'New quotation submitted for $${projectName} by $${submittedBy}',
      TRUE, 'en'),
 
     ('BUDGET_EXCEEDED', 'Budget Exceeded Alert', 'Budget Exceeded',
-     'URGENT: Budget Exceeded - ${projectName}',
-     'Project ${projectName} has exceeded its allocated budget. Current utilization: ${utilizationPercentage}%',
-     'URGENT: ${projectName} over budget (${utilizationPercentage}%)',
-     'Project ${projectName} has exceeded budget - ${utilizationPercentage}%',
+     'URGENT: Budget Exceeded - $${projectName}',
+     'Project $${projectName} has exceeded its allocated budget. Current utilization: $${utilizationPercentage}%',
+     'URGENT: $${projectName} over budget ($${utilizationPercentage}%)',
+     'Project $${projectName} has exceeded budget - $${utilizationPercentage}%',
      TRUE, 'en'),
 
     ('PAYMENT_COMPLETED', 'Payment Completed', 'Payment Processed',
-     'Payment Completed - ${projectName}',
-     'Payment of ${amount} for project ${projectName} has been completed on ${paymentDate}.',
-     'Payment of ${amount} completed for ${projectName}',
-     'Payment completed: ${amount} for ${projectName}',
+     'Payment Completed - $${projectName}',
+     'Payment of $${amount} for project $${projectName} has been completed on $${paymentDate}.',
+     'Payment of $${amount} completed for $${projectName}',
+     'Payment completed: $${amount} for $${projectName}',
      TRUE, 'en')
     ON CONFLICT (type) DO NOTHING;
-
 -- Add comments for documentation
 COMMENT ON TABLE notification_preferences IS 'User notification preferences and settings';
 COMMENT ON TABLE sms_logs IS 'SMS delivery logs and tracking';
