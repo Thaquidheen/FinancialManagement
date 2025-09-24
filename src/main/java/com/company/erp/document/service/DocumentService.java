@@ -18,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -378,7 +379,8 @@ public class DocumentService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + userId));
         String primaryRole = getPrimaryRole(user);
-        return documentRepository.findRecentDocuments(userId, primaryRole, limit);
+        Page<Document> page = documentRepository.findRecentDocuments(userId, primaryRole, PageRequest.of(0, limit));
+        return page.getContent();
     }
 
     @Transactional(readOnly = true)
@@ -386,7 +388,8 @@ public class DocumentService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new IllegalArgumentException("User not found with id: " + userId));
         String primaryRole = getPrimaryRole(user);
-        return documentRepository.findFrequentlyAccessedDocuments(userId, primaryRole, limit);
+        Page<Document> page = documentRepository.findFrequentlyAccessedDocuments(userId, primaryRole, PageRequest.of(0, limit));
+        return page.getContent();
     }
 
     /**

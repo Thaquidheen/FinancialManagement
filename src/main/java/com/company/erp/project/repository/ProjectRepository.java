@@ -163,7 +163,7 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
             "AND p.active = true")
     List<Project> findProjectsRequiringAttention();
 
-    boolean existsByIdAndManagerIdAndActiveTrue(Long id, Long managerId, Boolean active);
+    boolean existsByIdAndManagerIdAndActiveTrue(Long id, Long managerId);
 
     @Query("SELECT COUNT(p) FROM Project p WHERE p.active = true")
     Long countByActiveTrue();
@@ -171,7 +171,7 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
     /**
      * Count projects by manager ID and active status
      */
-    @Query("SELECT COUNT(p) FROM Project p WHERE p.managerId = :managerId AND p.active = true")
+    @Query("SELECT COUNT(p) FROM Project p WHERE p.manager.id = :managerId AND p.active = true")
     Long countByManagerIdAndActiveTrue(@Param("managerId") Long managerId);
 
     /**
@@ -200,13 +200,13 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
     /**
      * Get total allocated budget for projects managed by specific user
      */
-    @Query("SELECT COALESCE(SUM(p.allocatedBudget), 0) FROM Project p WHERE p.managerId = :managerId AND p.active = true")
+    @Query("SELECT COALESCE(SUM(p.allocatedBudget), 0) FROM Project p WHERE p.manager.id = :managerId AND p.active = true")
     BigDecimal getTotalAllocatedBudgetByManager(@Param("managerId") Long managerId);
 
     /**
      * Get total spent amount for projects managed by specific user
      */
-    @Query("SELECT COALESCE(SUM(p.spentAmount), 0) FROM Project p WHERE p.managerId = :managerId AND p.active = true")
+    @Query("SELECT COALESCE(SUM(p.spentAmount), 0) FROM Project p WHERE p.manager.id = :managerId AND p.active = true")
     BigDecimal getTotalSpentAmountByManager(@Param("managerId") Long managerId);
 
     /**
@@ -231,7 +231,7 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
     /**
      * Find top spending projects
      */
-    @Query("SELECT p FROM Project p WHERE p.active = true ORDER BY p.spentAmount DESC LIMIT :limit")
+    @Query(value = "SELECT * FROM projects WHERE active = true ORDER BY spent_amount DESC LIMIT :limit", nativeQuery = true)
     List<Project> findTopSpendingProjects(@Param("limit") int limit);
 
     /**

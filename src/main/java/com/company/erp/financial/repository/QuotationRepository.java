@@ -26,10 +26,10 @@ public interface QuotationRepository extends JpaRepository<Quotation, Long> {
     Page<Quotation> findByActiveTrue(Pageable pageable);
 
     // Find with relationships loaded
-    @Query("SELECT q FROM Quotation q LEFT JOIN FETCH q.project LEFT JOIN FETCH q.createdBy WHERE q.id = :id AND q.active = true")
+    @Query("SELECT q FROM Quotation q LEFT JOIN FETCH q.project LEFT JOIN FETCH q.creator WHERE q.id = :id AND q.active = true")
     Optional<Quotation> findByIdWithProjectAndCreator(@Param("id") Long id);
 
-    @Query("SELECT q FROM Quotation q LEFT JOIN FETCH q.project LEFT JOIN FETCH q.createdBy LEFT JOIN FETCH q.items WHERE q.id = :id AND q.active = true")
+    @Query("SELECT q FROM Quotation q LEFT JOIN FETCH q.project LEFT JOIN FETCH q.creator LEFT JOIN FETCH q.items WHERE q.id = :id AND q.active = true")
     Optional<Quotation> findByIdWithProjectAndItems(@Param("id") Long id);
 
     // Find by project
@@ -39,25 +39,26 @@ public interface QuotationRepository extends JpaRepository<Quotation, Long> {
     List<Quotation> findByProjectIdWithItems(@Param("projectId") Long projectId);
 
     // Find by creator (project manager)
-    List<Quotation> findByCreatedByIdAndActiveTrue(Long createdById);
+    @Query("SELECT q FROM Quotation q WHERE q.creator.id = :createdById AND q.active = true")
+    List<Quotation> findByCreatedByIdAndActiveTrue(@Param("createdById") Long createdById);
 
-    @Query("SELECT q FROM Quotation q LEFT JOIN FETCH q.project WHERE q.createdBy.id = :createdById AND q.active = true")
+    @Query("SELECT q FROM Quotation q LEFT JOIN FETCH q.project WHERE q.creator.id = :createdById AND q.active = true")
     Page<Quotation> findByCreatedByIdWithProject(@Param("createdById") Long createdById, Pageable pageable);
 
     // Find by status
     List<Quotation> findByStatusAndActiveTrue(QuotationStatus status);
 
-    @Query("SELECT q FROM Quotation q LEFT JOIN FETCH q.project LEFT JOIN FETCH q.createdBy WHERE q.status = :status AND q.active = true")
+    @Query("SELECT q FROM Quotation q LEFT JOIN FETCH q.project LEFT JOIN FETCH q.creator WHERE q.status = :status AND q.active = true")
     Page<Quotation> findByStatusWithProject(@Param("status") QuotationStatus status, Pageable pageable);
 
     // Find all with project info
-    @Query("SELECT q FROM Quotation q LEFT JOIN FETCH q.project LEFT JOIN FETCH q.createdBy WHERE q.active = true")
+    @Query("SELECT q FROM Quotation q LEFT JOIN FETCH q.project LEFT JOIN FETCH q.creator WHERE q.active = true")
     Page<Quotation> findAllWithProject(Pageable pageable);
 
     // Search by multiple criteria
-    @Query("SELECT q FROM Quotation q LEFT JOIN FETCH q.project LEFT JOIN FETCH q.createdBy WHERE " +
+    @Query("SELECT q FROM Quotation q LEFT JOIN FETCH q.project LEFT JOIN FETCH q.creator WHERE " +
             "(:projectId IS NULL OR q.project.id = :projectId) AND " +
-            "(:createdById IS NULL OR q.createdBy.id = :createdById) AND " +
+            "(:createdById IS NULL OR q.creator.id = :createdById) AND " +
             "(:status IS NULL OR q.status = :status) AND " +
             "(:description IS NULL OR LOWER(q.description) LIKE LOWER(CONCAT('%', :description, '%'))) AND " +
             "q.active = true")
@@ -71,7 +72,7 @@ public interface QuotationRepository extends JpaRepository<Quotation, Long> {
     @Query("SELECT SUM(q.totalAmount) FROM Quotation q WHERE q.project.id = :projectId AND q.status IN ('APPROVED', 'PAYMENT_FILE_GENERATED', 'SENT_TO_BANK', 'PAID') AND q.active = true")
     BigDecimal getTotalApprovedAmountByProject(@Param("projectId") Long projectId);
 
-    @Query("SELECT SUM(q.totalAmount) FROM Quotation q WHERE q.createdBy.id = :createdById AND q.status = :status AND q.active = true")
+    @Query("SELECT SUM(q.totalAmount) FROM Quotation q WHERE q.creator.id = :createdById AND q.status = :status AND q.active = true")
     BigDecimal getTotalAmountByCreatorAndStatus(@Param("createdById") Long createdById, @Param("status") QuotationStatus status);
 
     @Query("SELECT q FROM Quotation q WHERE q.totalAmount > :amount AND q.active = true")
@@ -91,7 +92,7 @@ public interface QuotationRepository extends JpaRepository<Quotation, Long> {
     @Query("SELECT COUNT(q) FROM Quotation q WHERE q.status = :status AND q.active = true")
     long countByStatus(@Param("status") QuotationStatus status);
 
-    @Query("SELECT COUNT(q) FROM Quotation q WHERE q.createdBy.id = :createdById AND q.active = true")
+    @Query("SELECT COUNT(q) FROM Quotation q WHERE q.creator.id = :createdById AND q.active = true")
     long countByCreatedBy(@Param("createdById") Long createdById);
 
     @Query("SELECT COUNT(q) FROM Quotation q WHERE q.project.id = :projectId AND q.active = true")
@@ -111,7 +112,7 @@ public interface QuotationRepository extends JpaRepository<Quotation, Long> {
     void deactivateQuotation(@Param("quotationId") Long quotationId);
 
     // Approval workflow queries
-    @Query("SELECT q FROM Quotation q LEFT JOIN FETCH q.project LEFT JOIN FETCH q.createdBy WHERE q.status IN ('SUBMITTED', 'UNDER_REVIEW') AND q.active = true ORDER BY q.submittedDate ASC")
+    @Query("SELECT q FROM Quotation q LEFT JOIN FETCH q.project LEFT JOIN FETCH q.creator WHERE q.status IN ('SUBMITTED', 'UNDER_REVIEW') AND q.active = true ORDER BY q.submittedDate ASC")
     List<Quotation> findPendingApprovals();
 
     @Query("SELECT q FROM Quotation q WHERE q.approvedBy.id = :approverId AND q.active = true")
@@ -129,7 +130,7 @@ public interface QuotationRepository extends JpaRepository<Quotation, Long> {
     @Query("SELECT p.manager.department, COUNT(q), SUM(q.totalAmount) FROM Quotation q JOIN q.project p WHERE q.active = true AND p.manager.department IS NOT NULL GROUP BY p.manager.department")
     List<Object[]> getQuotationStatsByDepartment();
 
-    @Query("SELECT q.createdBy.fullName, COUNT(q), SUM(q.totalAmount) FROM Quotation q WHERE q.active = true GROUP BY q.createdBy.id, q.createdBy.fullName")
+    @Query("SELECT q.creator.fullName, COUNT(q), SUM(q.totalAmount) FROM Quotation q WHERE q.active = true GROUP BY q.creator.id, q.creator.fullName")
     List<Object[]> getQuotationStatsByManager();
 
     // Find quotations submitted before a certain date (for urgent approvals)

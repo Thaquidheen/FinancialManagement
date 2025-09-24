@@ -552,7 +552,7 @@ public class BudgetTrackingService {
     }
 
     private void validateProjectManagerAccess(Long projectId, Long userId) {
-        boolean hasAccess = projectRepository.existsByIdAndManagerIdAndActiveTrue(projectId, userId, true);
+        boolean hasAccess = projectRepository.existsByIdAndManagerIdAndActiveTrue(projectId, userId);
         if (!hasAccess) {
             throw new UnauthorizedAccessException("Access denied for this project");
         }

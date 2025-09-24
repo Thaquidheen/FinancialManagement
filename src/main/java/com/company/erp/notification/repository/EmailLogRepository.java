@@ -21,8 +21,8 @@ public interface EmailLogRepository extends JpaRepository<EmailLog, Long> {
     // Count methods for statistics
     long countBySuccess(Boolean success);
 
-    @Query("SELECT COUNT(e) FROM EmailLog e WHERE DATE(e.sentAt) = CURRENT_DATE")
-    long countTodayEmails();
+    @Query("SELECT COUNT(e) FROM EmailLog e WHERE e.sentAt >= :startOfDay AND e.sentAt < :endOfDay")
+    long countTodayEmails(@Param("startOfDay") LocalDateTime startOfDay, @Param("endOfDay") LocalDateTime endOfDay);
 
     @Query("SELECT COUNT(e) FROM EmailLog e WHERE e.sentAt >= :startOfWeek")
     long countThisWeekEmails(@Param("startOfWeek") LocalDateTime startOfWeek);
@@ -51,5 +51,12 @@ public interface EmailLogRepository extends JpaRepository<EmailLog, Long> {
     default long countThisMonthEmails() {
         LocalDateTime startOfMonth = LocalDateTime.now().minusDays(30);
         return countThisMonthEmails(startOfMonth);
+    }
+
+    default long countTodayEmails() {
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime startOfDay = now.toLocalDate().atStartOfDay();
+        LocalDateTime endOfDay = startOfDay.plusDays(1);
+        return countTodayEmails(startOfDay, endOfDay);
     }
 }

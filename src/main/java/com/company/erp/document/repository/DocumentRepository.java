@@ -76,9 +76,9 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
             "     (:userRole = 'PROJECT_MANAGER' AND d.projectId IN " +
             "      (SELECT p.id FROM Project p WHERE p.manager.id = :userId))) " +
             "ORDER BY d.createdDate DESC")
-    List<Document> findRecentDocuments(@Param("userId") Long userId,
+    Page<Document> findRecentDocuments(@Param("userId") Long userId,
                                        @Param("userRole") String userRole,
-                                       @Param("limit") int limit);
+                                       Pageable pageable);
 
     // Frequently accessed documents
     @Query("SELECT d FROM Document d " +
@@ -89,9 +89,9 @@ public interface DocumentRepository extends JpaRepository<Document, Long> {
             "     (:userRole = 'PROJECT_MANAGER' AND d.projectId IN " +
             "      (SELECT p.id FROM Project p WHERE p.manager.id = :userId))) " +
             "ORDER BY d.accessCount DESC, d.lastAccessedDate DESC")
-    List<Document> findFrequentlyAccessedDocuments(@Param("userId") Long userId,
+    Page<Document> findFrequentlyAccessedDocuments(@Param("userId") Long userId,
                                                    @Param("userRole") String userRole,
-                                                   @Param("limit") int limit);
+                                                   Pageable pageable);
 
     // Statistics methods
     long countByDeletedFalse();

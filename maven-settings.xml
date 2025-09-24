@@ -1,0 +1,18 @@
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0">
+  <mirrors>
+    <mirror>
+      <id>central-mirror</id>
+      <name>Central mirror</name>
+      <url>https://repo1.maven.org/maven2</url>
+      <mirrorOf>central</mirrorOf>
+    </mirror>
+    <!-- If you’re in CN or behind corp firewall, use a nearer mirror, e.g. Aliyun:
+    <mirror>
+      <id>aliyun</id>
+      <name>Aliyun Maven</name>
+      <url>https://maven.aliyun.com/repository/public</url>
+      <mirrorOf>central</mirrorOf>
+    </mirror>
+    -->
+  </mirrors>
+</settings>

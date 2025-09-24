@@ -12,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
+import org.springframework.util.unit.DataSize;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
@@ -43,8 +44,8 @@ public class FileStorageService {
     @Value("${app.file.upload-dir:./uploads}")
     private String uploadDir;
 
-    @Value("${app.file.max-file-size:10485760}") // 10MB default
-    private long maxFileSize;
+    @Value("${app.file.max-file-size:10MB}") // accepts human-readable sizes like 10MB
+    private DataSize maxFileSize;
 
     @Value("${app.file.allowed-types:jpg,jpeg,png,gif,pdf,doc,docx,xls,xlsx,txt}")
     private String[] allowedTypes;
@@ -83,7 +84,7 @@ public class FileStorageService {
 
             logger.info("File storage initialized at: {}", this.fileStorageLocation);
             logger.info("Storage type: {}", storageType);
-            logger.info("Max file size: {} MB", maxFileSize / 1024 / 1024);
+            logger.info("Max file size: {} MB", maxFileSize.toMegabytes());
             logger.info("Allowed extensions: {}", allowedExtensions);
 
         } catch (IOException e) {
@@ -443,9 +444,9 @@ public class FileStorageService {
             throw new FileStorageException("Cannot store empty file");
         }
 
-        if (file.getSize() > maxFileSize) {
+        if (file.getSize() > maxFileSize.toBytes()) {
             throw new FileStorageException("File size exceeds maximum allowed size of " +
-                    formatFileSize(maxFileSize));
+                    formatFileSize(maxFileSize.toBytes()));
         }
 
         String fileName = StringUtils.cleanPath(file.getOriginalFilename());
