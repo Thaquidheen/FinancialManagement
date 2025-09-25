@@ -5,6 +5,7 @@ import com.company.erp.common.exception.DuplicateResourceException;
 import com.company.erp.common.exception.ResourceNotFoundException;
 import com.company.erp.user.dto.request.CreateUserRequest;
 import com.company.erp.user.dto.request.UpdateUserRequest;
+import com.company.erp.user.dto.response.RoleResponse;
 import com.company.erp.user.dto.response.UserResponse;
 import com.company.erp.user.entity.Role;
 import com.company.erp.user.entity.User;
@@ -190,6 +191,40 @@ public class UserService {
 
         return convertToUserResponse(user);
     }
+
+    @Transactional(readOnly = true)
+    public List<Role> getAllActiveRoles() {
+        logger.debug("Fetching all active roles");
+        return roleRepository.findByActiveTrue();
+    }
+
+    /**
+     * Get all active roles with full details
+     */
+    @Transactional(readOnly = true)
+    public List<RoleResponse> getAllActiveRolesDetailed() {
+        logger.debug("Fetching all active roles with details");
+        List<Role> roles = roleRepository.findByActiveTrue();
+
+        return roles.stream()
+                .map(this::convertToRoleResponse)
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Convert Role entity to RoleResponse DTO (if you need it)
+     */
+    private RoleResponse convertToRoleResponse(Role role) {
+        RoleResponse response = new RoleResponse();
+        response.setId(role.getId());
+        response.setName(role.getName());
+        response.setDisplayName(role.getName().replace("_", " "));
+        response.setDescription(role.getDescription());
+        response.setActive(role.getActive());
+        response.setCreatedDate(role.getCreatedDate());
+        return response;
+    }
+
 
     /**
      * Find User entity by ID (for internal services needing entity access)

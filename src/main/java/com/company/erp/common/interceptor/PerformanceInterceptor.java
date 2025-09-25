@@ -20,8 +20,10 @@ public class PerformanceInterceptor {
         this.performanceMonitoringService = performanceMonitoringService;
     }
 
-    @Around("@annotation(com.company.erp.common.annotation.Monitored) || " +
-            "execution(* com.company.erp.*.service.*.*(..))")
+    @Around("( @annotation(com.company.erp.common.annotation.Monitored) || " +
+            "execution(* com.company.erp.*.service.*.*(..)) ) " +
+            "&& !within(com.company.erp.common.service.PerformanceMonitoringService) " +
+            "&& !execution(* com.company.erp.common.service.PerformanceMonitoringService.*(..))")
     public Object monitorPerformance(ProceedingJoinPoint joinPoint) throws Throwable {
         long startTime = System.currentTimeMillis();
         String operationName = joinPoint.getSignature().getDeclaringType().getSimpleName() +

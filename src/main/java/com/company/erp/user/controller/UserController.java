@@ -4,6 +4,7 @@ import com.company.erp.user.dto.request.AssignRolesRequest;
 import com.company.erp.user.dto.request.CreateUserRequest;
 import com.company.erp.user.dto.request.UpdateUserRequest;
 import com.company.erp.user.dto.response.UserResponse;
+import com.company.erp.user.entity.Role;
 import com.company.erp.user.entity.UserBankDetails;
 import com.company.erp.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,9 +29,10 @@ import org.springframework.web.bind.annotation.*;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/users")
+@RequestMapping("/users")
 @Tag(name = "User Management", description = "User CRUD operations and management endpoints")
 @Validated
 public class UserController {
@@ -47,7 +49,7 @@ public class UserController {
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @PostMapping
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
     public ResponseEntity<UserResponse> createUser(@Valid @RequestBody CreateUserRequest request) {
         logger.info("Creating new user: {}", request.getUsername());
 
@@ -64,7 +66,7 @@ public class UserController {
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @GetMapping("/{userId}")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ACCOUNT_MANAGER') or @userService.isCurrentUser(#userId)")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN') or hasAuthority('ACCOUNT_MANAGER') or @userService.isCurrentUser(#userId)")
     public ResponseEntity<UserResponse> getUserById(
             @Parameter(description = "User ID") @PathVariable Long userId) {
 
@@ -73,13 +75,41 @@ public class UserController {
         return ResponseEntity.ok(userResponse);
     }
 
+    @Operation(summary = "Get available roles", description = "Get list of all available system roles")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Roles retrieved successfully"),
+            @ApiResponse(responseCode = "403", description = "Access denied")
+    })
+    @GetMapping("/roles")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
+    public ResponseEntity<List<Map<String, Object>>> getAvailableRoles() {
+        // You'll need to create this method in your UserService
+        List<Role> roles = userService.getAllActiveRoles();
+
+        List<Map<String, Object>> rolesList = roles.stream()
+                .map(role -> {
+                    Map<String, Object> roleMap = new HashMap<>();
+                    roleMap.put("id", role.getId());
+                    roleMap.put("name", role.getName());
+                    roleMap.put("displayName", role.getName().replace("_", " "));
+                    roleMap.put("description", role.getDescription());
+                    roleMap.put("isActive", role.getActive());
+                    return roleMap;
+                })
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(rolesList);
+    }
+
+
+
     @Operation(summary = "Get all users", description = "Retrieve paginated list of all users")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Users retrieved successfully"),
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @GetMapping
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ACCOUNT_MANAGER')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN') or hasAuthority('ACCOUNT_MANAGER')")
     public ResponseEntity<Page<UserResponse>> getAllUsers(
             @Parameter(description = "Page number (0-based)") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int size,
@@ -99,7 +129,7 @@ public class UserController {
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @GetMapping("/search")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ACCOUNT_MANAGER')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN') or hasAuthority('ACCOUNT_MANAGER')")
     public ResponseEntity<Page<UserResponse>> searchUsers(
             @Parameter(description = "Full name search term") @RequestParam(required = false) String fullName,
             @Parameter(description = "Department filter") @RequestParam(required = false) String department,
@@ -120,7 +150,7 @@ public class UserController {
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @PutMapping("/{userId}")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or @userService.isCurrentUser(#userId)")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN') or @userService.isCurrentUser(#userId)")
     public ResponseEntity<UserResponse> updateUser(
             @Parameter(description = "User ID") @PathVariable Long userId,
             @Valid @RequestBody UpdateUserRequest request) {
@@ -138,7 +168,7 @@ public class UserController {
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @PutMapping("/{userId}/roles")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
     public ResponseEntity<UserResponse> updateUserRoles(
             @Parameter(description = "User ID") @PathVariable Long userId,
             @Valid @RequestBody AssignRolesRequest request) {
@@ -156,7 +186,7 @@ public class UserController {
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @PutMapping("/{userId}/bank-details")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ACCOUNT_MANAGER') or @userService.isCurrentUser(#userId)")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN') or hasAuthority('ACCOUNT_MANAGER') or @userService.isCurrentUser(#userId)")
     public ResponseEntity<UserResponse> updateBankDetails(
             @Parameter(description = "User ID") @PathVariable Long userId,
             @Valid @RequestBody UserBankDetails bankDetails) {
@@ -173,7 +203,7 @@ public class UserController {
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @PutMapping("/{userId}/deactivate")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
     public ResponseEntity<Map<String, String>> deactivateUser(
             @Parameter(description = "User ID") @PathVariable Long userId) {
 
@@ -192,7 +222,7 @@ public class UserController {
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @PutMapping("/{userId}/activate")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
     public ResponseEntity<Map<String, String>> activateUser(
             @Parameter(description = "User ID") @PathVariable Long userId) {
 
@@ -211,7 +241,7 @@ public class UserController {
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @DeleteMapping("/{userId}")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
     public ResponseEntity<Map<String, String>> deleteUser(
             @Parameter(description = "User ID") @PathVariable Long userId) {
 
@@ -229,7 +259,7 @@ public class UserController {
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @GetMapping("/project-managers")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ACCOUNT_MANAGER')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN') or hasAuthority('ACCOUNT_MANAGER')")
     public ResponseEntity<List<UserResponse>> getProjectManagers() {
         List<UserResponse> projectManagers = userService.getProjectManagers();
         return ResponseEntity.ok(projectManagers);
@@ -241,7 +271,7 @@ public class UserController {
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @GetMapping("/account-managers")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
     public ResponseEntity<List<UserResponse>> getAccountManagers() {
         List<UserResponse> accountManagers = userService.getAccountManagers();
         return ResponseEntity.ok(accountManagers);
@@ -253,7 +283,7 @@ public class UserController {
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @GetMapping("/by-role/{roleName}")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ACCOUNT_MANAGER')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN') or hasAuthority('ACCOUNT_MANAGER')")
     public ResponseEntity<List<UserResponse>> getUsersByRole(
             @Parameter(description = "Role name") @PathVariable String roleName) {
 
@@ -267,7 +297,7 @@ public class UserController {
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @GetMapping("/statistics")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ACCOUNT_MANAGER')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN') or hasAuthority('ACCOUNT_MANAGER')")
     public ResponseEntity<Map<String, Object>> getUserStatistics() {
         UserService.UserStatistics stats = userService.getUserStatistics();
 

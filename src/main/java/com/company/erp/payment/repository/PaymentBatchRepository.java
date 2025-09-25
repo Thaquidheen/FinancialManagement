@@ -26,12 +26,12 @@ public interface PaymentBatchRepository extends JpaRepository<PaymentBatch, Long
     List<PaymentBatch> findByBankNameAndActiveTrue(String bankName);
     Page<PaymentBatch> findByBankNameAndActiveTrue(String bankName, Pageable pageable);
 
-    // Find by creator
-    List<PaymentBatch> findByCreatedByIdAndActiveTrue(Long createdById);
-    Page<PaymentBatch> findByCreatedByIdAndActiveTrue(Long createdById, Pageable pageable);
+    // FIXED: Use 'creator' instead of 'createdBy' since creator is the User entity
+    List<PaymentBatch> findByCreatorIdAndActiveTrue(Long creatorId);
+    Page<PaymentBatch> findByCreatorIdAndActiveTrue(Long creatorId, Pageable pageable);
 
     // Find all with details
-    @Query("SELECT b FROM PaymentBatch b LEFT JOIN FETCH b.createdBy WHERE b.active = true")
+    @Query("SELECT b FROM PaymentBatch b LEFT JOIN FETCH b.creator WHERE b.active = true")
     Page<PaymentBatch> findAllWithDetails(Pageable pageable);
 
     // Find batches ready for download

@@ -382,9 +382,9 @@ management:
       show-components: when-authorized
       group:
         readiness:
-          include: readinessState,db,diskSpace
+          include: db,diskSpace
         liveness:
-          include: livenessState,ping
+          include: ping
 
     info:
       enabled: true
