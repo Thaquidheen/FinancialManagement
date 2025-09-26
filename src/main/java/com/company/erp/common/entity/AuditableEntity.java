@@ -11,29 +11,29 @@ public abstract class AuditableEntity extends BaseEntity {
 
     @CreatedBy
     @Column(name = "created_by", updatable = false)
-    private String createdBy;
+    private Long createdBy;
 
     @LastModifiedBy
     @Column(name = "last_modified_by")
-    private String lastModifiedBy;
+    private Long lastModifiedBy;
 
     @Column(name = "active", nullable = false)
     private Boolean active = true;
 
     // Getters and Setters
-    public String getCreatedBy() {
+    public Long getCreatedBy() {
         return createdBy;
     }
 
-    public void setCreatedBy(String createdBy) {
+    public void setCreatedBy(Long createdBy) {
         this.createdBy = createdBy;
     }
 
-    public String getLastModifiedBy() {
+    public Long getLastModifiedBy() {
         return lastModifiedBy;
     }
 
-    public void setLastModifiedBy(String lastModifiedBy) {
+    public void setLastModifiedBy(Long lastModifiedBy) {
         this.lastModifiedBy = lastModifiedBy;
     }
 
