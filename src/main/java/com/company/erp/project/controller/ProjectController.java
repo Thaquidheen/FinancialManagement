@@ -150,7 +150,7 @@ public class ProjectController {
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @PutMapping("/{projectId}")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or @projectService.canUserAccessProject(#projectId, authentication.principal.id)")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN') or @projectService.canUserAccessProject(#projectId, authentication.principal.id)")
     public ResponseEntity<ProjectResponse> updateProject(
             @Parameter(description = "Project ID") @PathVariable Long projectId,
             @Valid @RequestBody UpdateProjectRequest request) {
@@ -168,7 +168,7 @@ public class ProjectController {
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @PutMapping("/{projectId}/assign-manager")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
     public ResponseEntity<ProjectResponse> assignManager(
             @Parameter(description = "Project ID") @PathVariable Long projectId,
             @Valid @RequestBody AssignManagerRequest request) {
@@ -186,7 +186,7 @@ public class ProjectController {
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @PutMapping("/{projectId}/budget")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
     public ResponseEntity<ProjectResponse> updateProjectBudget(
             @Parameter(description = "Project ID") @PathVariable Long projectId,
             @Valid @RequestBody UpdateBudgetRequest request) {
@@ -204,7 +204,7 @@ public class ProjectController {
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @PutMapping("/{projectId}/status")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or @projectService.canUserAccessProject(#projectId, authentication.principal.id)")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN') or @projectService.canUserAccessProject(#projectId, authentication.principal.id)")
     public ResponseEntity<ProjectResponse> updateProjectStatus(
             @Parameter(description = "Project ID") @PathVariable Long projectId,
             @Valid @RequestBody UpdateStatusRequest request) {
@@ -230,7 +230,7 @@ public class ProjectController {
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @GetMapping("/by-status/{status}")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ACCOUNT_MANAGER')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN') or hasAuthority('ACCOUNT_MANAGER')")
     public ResponseEntity<List<ProjectResponse>> getProjectsByStatus(
             @Parameter(description = "Project status") @PathVariable String status) {
 
@@ -253,7 +253,7 @@ public class ProjectController {
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @GetMapping("/requiring-attention")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ACCOUNT_MANAGER')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN') or hasAuthority('ACCOUNT_MANAGER')")
     public ResponseEntity<List<ProjectResponse>> getProjectsRequiringAttention() {
         List<ProjectResponse> projects = projectService.getProjectsRequiringAttention();
         return ResponseEntity.ok(projects);
@@ -265,7 +265,7 @@ public class ProjectController {
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @GetMapping("/statistics")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ACCOUNT_MANAGER')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN') or hasAuthority('ACCOUNT_MANAGER')")
     public ResponseEntity<Map<String, Object>> getProjectStatistics() {
         ProjectService.ProjectStatistics stats = projectService.getProjectStatistics();
 
@@ -290,7 +290,7 @@ public class ProjectController {
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @DeleteMapping("/{projectId}")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
     public ResponseEntity<Map<String, String>> deactivateProject(
             @Parameter(description = "Project ID") @PathVariable Long projectId) {
 
