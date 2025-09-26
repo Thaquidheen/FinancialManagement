@@ -23,8 +23,8 @@ CREATE TABLE users (
                        last_login_date TIMESTAMP,
                        created_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                        last_modified_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                       created_by VARCHAR(50) DEFAULT 'system',
-                       last_modified_by VARCHAR(50) DEFAULT 'system',
+                       created_by BIGINT DEFAULT 1,
+                       last_modified_by BIGINT DEFAULT 1,
                        FOREIGN KEY (manager_id) REFERENCES users(id)
 );
 
@@ -36,8 +36,8 @@ CREATE TABLE roles (
                        active BOOLEAN NOT NULL DEFAULT true,
                        created_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                        last_modified_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                       created_by VARCHAR(50) DEFAULT 'system',
-                       last_modified_by VARCHAR(50) DEFAULT 'system'
+                       created_by BIGINT DEFAULT 1,
+                       last_modified_by BIGINT DEFAULT 1
 );
 
 -- User roles junction table
@@ -45,7 +45,7 @@ CREATE TABLE user_roles (
                             user_id BIGINT NOT NULL,
                             role_id BIGINT NOT NULL,
                             assigned_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                            assigned_by VARCHAR(50) DEFAULT 'system',
+                            assigned_by BIGINT DEFAULT 1,
                             PRIMARY KEY (user_id, role_id),
                             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
                             FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
@@ -63,8 +63,8 @@ CREATE TABLE user_bank_details (
                                    verification_date TIMESTAMP,
                                    created_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                                    last_modified_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                                   created_by VARCHAR(50) DEFAULT 'system',
-                                   last_modified_by VARCHAR(50) DEFAULT 'system',
+                                   created_by BIGINT DEFAULT 1,
+                                   last_modified_by BIGINT DEFAULT 1,
                                    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
@@ -86,8 +86,8 @@ CREATE TABLE projects (
                           active BOOLEAN NOT NULL DEFAULT true,
                           created_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                           last_modified_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                          created_by VARCHAR(50) DEFAULT 'system',
-                          last_modified_by VARCHAR(50) DEFAULT 'system',
+                          created_by BIGINT DEFAULT 1,
+                          last_modified_by BIGINT DEFAULT 1,
                           FOREIGN KEY (manager_id) REFERENCES users(id),
                           CHECK (status IN ('ACTIVE', 'COMPLETED', 'ON_HOLD', 'CANCELLED')),
                           CHECK (allocated_budget >= 0),
@@ -113,7 +113,7 @@ CREATE TABLE quotations (
                             created_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                             last_modified_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                             created_by_name VARCHAR(50) DEFAULT 'system',
-                            last_modified_by VARCHAR(50) DEFAULT 'system',
+                            last_modified_by BIGINT DEFAULT 1,
                             FOREIGN KEY (project_id) REFERENCES projects(id),
                             FOREIGN KEY (created_by) REFERENCES users(id),
                             FOREIGN KEY (approved_by) REFERENCES users(id),
@@ -137,8 +137,8 @@ CREATE TABLE quotation_items (
                                  active BOOLEAN NOT NULL DEFAULT true,
                                  created_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                                  last_modified_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                                 created_by VARCHAR(50) DEFAULT 'system',
-                                 last_modified_by VARCHAR(50) DEFAULT 'system',
+                                 created_by BIGINT DEFAULT 1,
+                                 last_modified_by BIGINT DEFAULT 1,
                                  FOREIGN KEY (quotation_id) REFERENCES quotations(id) ON DELETE CASCADE,
                                  CHECK (amount > 0)
 );
@@ -155,8 +155,8 @@ CREATE TABLE approvals (
                            active BOOLEAN NOT NULL DEFAULT true,
                            created_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
                            last_modified_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                           created_by VARCHAR(50) DEFAULT 'system',
-                           last_modified_by VARCHAR(50) DEFAULT 'system',
+                           created_by BIGINT DEFAULT 1,
+                           last_modified_by BIGINT DEFAULT 1,
                            FOREIGN KEY (quotation_id) REFERENCES quotations(id) ON DELETE CASCADE,
                            FOREIGN KEY (approver_id) REFERENCES users(id),
                            CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED', 'CHANGES_REQUESTED'))
@@ -183,10 +183,14 @@ INSERT INTO roles (name, description) VALUES
                                           ('ACCOUNT_MANAGER', 'Account Manager with approval and payment processing rights'),
                                           ('EMPLOYEE', 'Regular employee with basic system access');
 
--- Insert default admin user (password: admin123)
+-- Insert default system user (password: updated)
 INSERT INTO users (username, email, password_hash, full_name, active) VALUES
-    ('admin', 'admin@company.com', '$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iAt6Z5EHsM0w1I00LFO6Cg7OWtQa', 'System Administrator', true);
+    ('system', 'system@company.com', '$2y$12$VaJsK4QkKfJ8MU33YVUdK.RrQXbnLHtwFMAPrauYyH0wfgKgeBI/e', 'System User', true);
+
+-- Insert default admin user (password: updated)
+INSERT INTO users (username, email, password_hash, full_name, active) VALUES
+    ('admin', 'admin@company.com', '$2y$12$VaJsK4QkKfJ8MU33YVUdK.RrQXbnLHtwFMAPrauYyH0wfgKgeBI/e', 'System Administrator', true);
 
 -- Assign SUPER_ADMIN role to admin user
 INSERT INTO user_roles (user_id, role_id) VALUES
-    (1, (SELECT id FROM roles WHERE name = 'SUPER_ADMIN'));
+    (2, (SELECT id FROM roles WHERE name = 'SUPER_ADMIN'));

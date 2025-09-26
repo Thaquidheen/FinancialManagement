@@ -134,12 +134,27 @@ public class ProjectController {
     })
     @GetMapping("/my-projects")
     @PreAuthorize("hasAuthority('PROJECT_MANAGER') or hasAuthority('SUPER_ADMIN')")
-    public ResponseEntity<List<ProjectResponse>> getMyProjects() {
-        // Get current user ID from security context
-        Long currentUserId = getCurrentUserId(); // This method needs to be implemented
-
-        List<ProjectResponse> projects = projectService.getProjectsByManager(currentUserId);
-        return ResponseEntity.ok(projects);
+    public ResponseEntity<Map<String, Object>> getMyProjects() {
+        // Get current user from security context
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UserPrincipal currentUser = (UserPrincipal) authentication.getPrincipal();
+        
+        List<ProjectResponse> projects;
+        
+        // SUPER_ADMIN can see all projects, PROJECT_MANAGER sees only their managed projects
+        if (currentUser.hasRole("SUPER_ADMIN")) {
+            projects = projectService.getAllActiveProjects();
+        } else {
+            projects = projectService.getProjectsByManager(currentUser.getId());
+        }
+        
+        // Wrap in ApiResponse format
+        Map<String, Object> response = new HashMap<>();
+        response.put("success", true);
+        response.put("data", projects);
+        response.put("message", "Projects retrieved successfully");
+        
+        return ResponseEntity.ok(response);
     }
 
     @Operation(summary = "Update project", description = "Update project information")
@@ -265,9 +280,21 @@ public class ProjectController {
             @ApiResponse(responseCode = "403", description = "Access denied")
     })
     @GetMapping("/statistics")
-    @PreAuthorize("hasAuthority('SUPER_ADMIN') or hasAuthority('ACCOUNT_MANAGER')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN') or hasAuthority('ACCOUNT_MANAGER') or hasAuthority('PROJECT_MANAGER')")
     public ResponseEntity<Map<String, Object>> getProjectStatistics() {
-        ProjectService.ProjectStatistics stats = projectService.getProjectStatistics();
+        // Get current user from security context
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UserPrincipal currentUser = (UserPrincipal) authentication.getPrincipal();
+        
+        ProjectService.ProjectStatistics stats;
+        
+        // SUPER_ADMIN and ACCOUNT_MANAGER get system-wide statistics
+        if (currentUser.hasAnyRole("SUPER_ADMIN", "ACCOUNT_MANAGER")) {
+            stats = projectService.getProjectStatistics();
+        } else {
+            // PROJECT_MANAGER gets their own project statistics
+            stats = projectService.getProjectStatisticsForManager(currentUser.getId());
+        }
 
         Map<String, Object> response = new HashMap<>();
         response.put("totalProjects", stats.getTotalProjects());

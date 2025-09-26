@@ -163,6 +163,17 @@ public class ProjectService {
     }
 
     /**
+     * Get all active projects (for SUPER_ADMIN)
+     */
+    @Transactional(readOnly = true)
+    public List<ProjectResponse> getAllActiveProjects() {
+        List<Project> projects = projectRepository.findByActiveTrue();
+        return projects.stream()
+                .map(this::convertToProjectResponse)
+                .collect(Collectors.toList());
+    }
+
+    /**
      * Search projects by criteria
      */
     @Transactional(readOnly = true)
@@ -263,6 +274,29 @@ public class ProjectService {
 
         List<Object[]> managerWorkload = projectRepository.getManagerWorkloadStatistics();
         List<Object[]> departmentStats = projectRepository.getDepartmentProjectStatistics();
+
+        return new ProjectStatistics(totalProjects, activeProjects, completedProjects,
+                onHoldProjects, totalBudget, totalSpent, averageCompletion,
+                managerWorkload, departmentStats);
+    }
+
+    /**
+     * Get project statistics for a specific manager
+     */
+    @Transactional(readOnly = true)
+    public ProjectStatistics getProjectStatisticsForManager(Long managerId) {
+        long totalProjects = projectRepository.countProjectsByManagerId(managerId);
+        long activeProjects = projectRepository.countProjectsByManagerIdAndStatus(managerId, ProjectStatus.ACTIVE);
+        long completedProjects = projectRepository.countProjectsByManagerIdAndStatus(managerId, ProjectStatus.COMPLETED);
+        long onHoldProjects = projectRepository.countProjectsByManagerIdAndStatus(managerId, ProjectStatus.ON_HOLD);
+
+        BigDecimal totalBudget = projectRepository.getTotalAllocatedBudgetByManagerId(managerId);
+        BigDecimal totalSpent = projectRepository.getTotalSpentAmountByManagerId(managerId);
+        BigDecimal averageCompletion = projectRepository.getAverageCompletionPercentageByManagerId(managerId);
+
+        // For manager-specific stats, we don't need manager workload or department stats
+        List<Object[]> managerWorkload = List.of();
+        List<Object[]> departmentStats = List.of();
 
         return new ProjectStatistics(totalProjects, activeProjects, completedProjects,
                 onHoldProjects, totalBudget, totalSpent, averageCompletion,

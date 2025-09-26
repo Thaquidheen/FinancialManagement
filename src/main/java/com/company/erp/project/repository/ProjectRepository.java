@@ -246,4 +246,20 @@ public interface ProjectRepository extends JpaRepository<Project, Long> {
     @Query("SELECT p FROM Project p WHERE p.active = true AND " +
             "(p.spentAmount / NULLIF(p.allocatedBudget, 0)) * 100 > :threshold")
     List<Project> findProjectsOverBudgetThreshold(@Param("threshold") Double threshold);
+
+    // Manager-specific statistics queries
+    @Query("SELECT COUNT(p) FROM Project p WHERE p.manager.id = :managerId AND p.active = true")
+    long countProjectsByManagerId(@Param("managerId") Long managerId);
+
+    @Query("SELECT COUNT(p) FROM Project p WHERE p.manager.id = :managerId AND p.status = :status AND p.active = true")
+    long countProjectsByManagerIdAndStatus(@Param("managerId") Long managerId, @Param("status") ProjectStatus status);
+
+    @Query("SELECT COALESCE(SUM(p.allocatedBudget), 0) FROM Project p WHERE p.manager.id = :managerId AND p.active = true")
+    BigDecimal getTotalAllocatedBudgetByManagerId(@Param("managerId") Long managerId);
+
+    @Query("SELECT COALESCE(SUM(p.spentAmount), 0) FROM Project p WHERE p.manager.id = :managerId AND p.active = true")
+    BigDecimal getTotalSpentAmountByManagerId(@Param("managerId") Long managerId);
+
+    @Query("SELECT COALESCE(AVG(p.completionPercentage), 0) FROM Project p WHERE p.manager.id = :managerId AND p.active = true")
+    BigDecimal getAverageCompletionPercentageByManagerId(@Param("managerId") Long managerId);
 }
