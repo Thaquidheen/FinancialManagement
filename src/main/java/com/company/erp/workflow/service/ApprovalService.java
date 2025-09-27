@@ -319,6 +319,11 @@ public class ApprovalService {
                 response.setPriority("LOW");
                 response.setIsUrgent(false);
             }
+        } else {
+            // Default values if submitted date is null
+            response.setDaysPending(0);
+            response.setPriority("LOW");
+            response.setIsUrgent(false);
         }
 
         // Budget information

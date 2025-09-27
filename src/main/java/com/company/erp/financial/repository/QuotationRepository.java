@@ -133,6 +133,12 @@ public interface QuotationRepository extends JpaRepository<Quotation, Long> {
     @Query("SELECT q.creator.fullName, COUNT(q), SUM(q.totalAmount) FROM Quotation q WHERE q.active = true GROUP BY q.creator.id, q.creator.fullName")
     List<Object[]> getQuotationStatsByManager();
 
+    // Find approved quotations without payments
+    @Query("SELECT q FROM Quotation q LEFT JOIN FETCH q.project LEFT JOIN FETCH q.creator " +
+            "WHERE q.status = 'APPROVED' AND q.active = true " +
+            "AND NOT EXISTS (SELECT 1 FROM Payment p WHERE p.quotation.id = q.id AND p.active = true)")
+    Page<Quotation> findApprovedQuotationsWithoutPayments(Pageable pageable);
+
     // Find quotations submitted before a certain date (for urgent approvals)
     @Query("SELECT q FROM Quotation q LEFT JOIN FETCH q.project LEFT JOIN FETCH q.createdBy " +
             "WHERE q.status = :status AND q.submittedDate < :submittedBefore AND q.active = true")

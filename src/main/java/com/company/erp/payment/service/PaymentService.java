@@ -17,6 +17,7 @@ import com.company.erp.payment.entity.PaymentBatch;
 import com.company.erp.payment.entity.PaymentStatus;
 import com.company.erp.payment.repository.PaymentBatchRepository;
 import com.company.erp.payment.repository.PaymentRepository;
+import com.company.erp.financial.dto.response.QuotationSummaryResponse;
 import com.company.erp.user.entity.User;
 import com.company.erp.user.repository.UserRepository;
 import org.slf4j.Logger;
@@ -31,6 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -204,10 +206,25 @@ public class PaymentService {
         UserPrincipal currentUser = getCurrentUser();
         validatePaymentAccess(currentUser);
 
-        Page<Payment> payments = paymentRepository.findByStatusWithDetails(
-                PaymentStatus.PENDING, pageable);
+        // Get payments that are ready for processing (both PENDING and READY_FOR_PAYMENT)
+        Page<Payment> payments = paymentRepository.findByStatusInWithDetails(
+                Arrays.asList(PaymentStatus.PENDING, PaymentStatus.READY_FOR_PAYMENT), pageable);
 
         return payments.map(this::convertToPaymentSummaryResponse);
+    }
+
+    /**
+     * Get approved quotations ready for payment creation
+     */
+    @Transactional(readOnly = true)
+    public Page<QuotationSummaryResponse> getApprovedQuotationsReadyForPayment(Pageable pageable) {
+        UserPrincipal currentUser = getCurrentUser();
+        validatePaymentAccess(currentUser);
+
+        // Get approved quotations that don't have payments created yet
+        Page<Quotation> quotations = quotationRepository.findApprovedQuotationsWithoutPayments(pageable);
+
+        return quotations.map(this::convertToQuotationSummaryResponse);
     }
 
     /**
@@ -305,6 +322,22 @@ public class PaymentService {
         if (!currentUser.hasAnyRole("SUPER_ADMIN", "ACCOUNT_MANAGER")) {
             throw new UnauthorizedAccessException("Only Account Managers can process payments");
         }
+    }
+
+    private QuotationSummaryResponse convertToQuotationSummaryResponse(Quotation quotation) {
+        QuotationSummaryResponse response = new QuotationSummaryResponse();
+        response.setId(quotation.getId());
+        response.setProjectId(quotation.getProject().getId());
+        response.setProjectName(quotation.getProject().getName());
+        response.setCreatedBy(quotation.getCreator().getFullName());
+        response.setTotalAmount(quotation.getTotalAmount());
+        response.setCurrency(quotation.getCurrency());
+        response.setStatus(quotation.getStatus().toString());
+        response.setCreatedDate(quotation.getCreatedDate());
+        response.setSubmittedDate(quotation.getSubmittedDate());
+        response.setItemCount(quotation.getItems() != null ? quotation.getItems().size() : 0);
+        response.setExceedsBudget(quotation.getTotalAmount().compareTo(quotation.getProject().getRemainingBudget()) > 0);
+        return response;
     }
 
     private UserPrincipal getCurrentUser() {

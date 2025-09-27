@@ -8,6 +8,7 @@ import com.company.erp.payment.entity.PaymentBatch;
 import com.company.erp.payment.entity.PaymentStatus;
 import com.company.erp.payment.service.BankFileService;
 import com.company.erp.payment.service.PaymentService;
+import com.company.erp.financial.dto.response.QuotationSummaryResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -186,6 +187,30 @@ public class PaymentController {
         Page<PaymentSummaryResponse> payments = paymentService.getPaymentsReadyForProcessing(pageable);
 
         return ResponseEntity.ok(payments);
+    }
+
+    @Operation(summary = "Get approved quotations ready for payment creation",
+            description = "Get approved quotations that don't have payments created yet")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Quotations retrieved successfully"),
+            @ApiResponse(responseCode = "403", description = "Access denied")
+    })
+    @GetMapping("/approved-quotations")
+    @PreAuthorize("hasAuthority('ACCOUNT_MANAGER') or hasAuthority('SUPER_ADMIN')")
+    public ResponseEntity<Page<QuotationSummaryResponse>> getApprovedQuotationsReadyForPayment(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "approvedDate") String sortBy,
+            @RequestParam(defaultValue = "desc") String sortDir) {
+
+        logger.debug("Fetching approved quotations ready for payment - page: {}, size: {}", page, size);
+
+        Sort sort = sortDir.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
+        Pageable pageable = PageRequest.of(page, size, sort);
+
+        Page<QuotationSummaryResponse> quotations = paymentService.getApprovedQuotationsReadyForPayment(pageable);
+
+        return ResponseEntity.ok(quotations);
     }
 
     @Operation(summary = "Get payments by status",

@@ -24,6 +24,11 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
             "WHERE p.status = :status AND p.active = true")
     Page<Payment> findByStatusWithDetails(@Param("status") PaymentStatus status, Pageable pageable);
 
+    // Find payments with multiple statuses
+    @Query("SELECT p FROM Payment p LEFT JOIN FETCH p.quotation q LEFT JOIN FETCH q.project LEFT JOIN FETCH p.payee " +
+            "WHERE p.status IN :statuses AND p.active = true")
+    Page<Payment> findByStatusInWithDetails(@Param("statuses") List<PaymentStatus> statuses, Pageable pageable);
+
     // Find payments by payee
     List<Payment> findByPayeeIdAndActiveTrue(Long payeeId);
     Page<Payment> findByPayeeIdAndActiveTrue(Long payeeId, Pageable pageable);
