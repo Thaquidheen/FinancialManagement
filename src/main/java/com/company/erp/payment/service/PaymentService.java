@@ -169,12 +169,26 @@ public class PaymentService {
      * Confirm payments completed
      */
     public void confirmPaymentsCompleted(ConfirmPaymentRequest request) {
-        logger.info("Confirming {} payments as completed", request.getPaymentIds().size());
+        logger.info("Confirming payments as completed for batch: {}", request.getBatchId());
 
         UserPrincipal currentUser = getCurrentUser();
         validatePaymentAccess(currentUser);
 
-        List<Payment> payments = paymentRepository.findAllById(request.getPaymentIds());
+        List<Payment> payments;
+        
+        // If paymentIds is provided, use those specific payments
+        if (request.getPaymentIds() != null && !request.getPaymentIds().isEmpty()) {
+            payments = paymentRepository.findAllById(request.getPaymentIds());
+            logger.info("Using {} specific payment IDs", request.getPaymentIds().size());
+        } else if (request.getBatchId() != null) {
+            // If no paymentIds but batchId is provided, find all payments for this batch
+            PaymentBatch batch = paymentBatchRepository.findById(Long.parseLong(request.getBatchId()))
+                    .orElseThrow(() -> new ResourceNotFoundException("PaymentBatch", "id", request.getBatchId()));
+            payments = batch.getPayments();
+            logger.info("Found {} payments for batch {}", payments.size(), request.getBatchId());
+        } else {
+            throw new BusinessException("INVALID_REQUEST", "Either paymentIds or batchId must be provided");
+        }
 
         for (Payment payment : payments) {
             payment.markAsPaid(request.getBankReference());

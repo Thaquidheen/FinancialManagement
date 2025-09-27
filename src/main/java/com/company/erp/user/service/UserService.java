@@ -235,6 +235,14 @@ public class UserService {
     }
 
     /**
+     * Find User entity by username (for internal services needing entity access)
+     */
+    @Transactional(readOnly = true)
+    public Optional<User> findByUsername(String username) {
+        return userRepository.findByUsernameAndActiveTrue(username);
+    }
+
+    /**
      * Find all active users (entity list)
      */
     @Transactional(readOnly = true)

@@ -2,12 +2,7 @@
 package com.company.erp.notification.service;
 
 import com.company.erp.common.service.AuditService;
-import com.company.erp.notification.entity.Notification;
-import com.company.erp.notification.entity.NotificationPreference;
-import com.company.erp.notification.entity.NotificationTemplate;
-import com.company.erp.notification.entity.NotificationType;
-import com.company.erp.notification.entity.NotificationChannel;
-import com.company.erp.notification.entity.NotificationPriority;
+import com.company.erp.notification.entity.*;
 import com.company.erp.notification.repository.NotificationRepository;
 import com.company.erp.notification.repository.NotificationPreferenceRepository;
 import com.company.erp.notification.repository.NotificationTemplateRepository;
@@ -405,6 +400,56 @@ public class NotificationService {
         }
 
         notificationRepository.saveAll(unreadNotifications);
+    }
+
+    public NotificationPreferences getUserPreferences(Long userId) {
+        User user = userService.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+        
+        NotificationPreference preference = getOrCreateUserPreference(user);
+        return convertToPreferences(preference);
+    }
+
+    public NotificationPreferences updateUserPreferences(Long userId, NotificationPreferences preferences) {
+        User user = userService.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+        
+        NotificationPreference preference = getOrCreateUserPreference(user);
+        preference.setEmailEnabled(preferences.isEmailEnabled());
+        preference.setSmsEnabled(preferences.isSmsEnabled());
+        preference.setInAppEnabled(preferences.isInAppEnabled());
+        preference.setPushEnabled(preferences.isPushEnabled());
+        
+        NotificationPreference saved = preferenceRepository.save(preference);
+        return convertToPreferences(saved);
+    }
+
+    private NotificationPreferences convertToPreferences(NotificationPreference preference) {
+        NotificationPreferences dto = new NotificationPreferences();
+        dto.setId(preference.getId());
+        dto.setUserId(preference.getUser().getId());
+        dto.setEmailEnabled(preference.getEmailEnabled());
+        dto.setSmsEnabled(preference.getSmsEnabled());
+        dto.setInAppEnabled(preference.getInAppEnabled());
+        dto.setPushEnabled(preference.getPushEnabled());
+        // Set default values for notification types since they don't exist in the entity
+        dto.setQuotationNotifications(true);
+        dto.setPaymentNotifications(true);
+        dto.setSystemNotifications(true);
+        dto.setMarketingNotifications(false);
+        return dto;
+    }
+
+    public void deleteNotification(Long notificationId, Long userId) {
+        Notification notification = notificationRepository.findByIdAndActiveTrue(notificationId)
+                .orElseThrow(() -> new RuntimeException("Notification not found"));
+        
+        if (!notification.getUser().getId().equals(userId)) {
+            throw new RuntimeException("Notification does not belong to user");
+        }
+        
+        notification.setActive(false);
+        notificationRepository.save(notification);
     }
 }
 
