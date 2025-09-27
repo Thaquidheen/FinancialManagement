@@ -1,6 +1,7 @@
 package com.company.erp.user.entity;
 
 import com.company.erp.common.entity.AuditableEntity;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Size;
 
@@ -12,6 +13,7 @@ public class UserBankDetails extends AuditableEntity {
 
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false, unique = true)
+    @JsonIgnore
     private User user;
 
     @Size(max = 100)

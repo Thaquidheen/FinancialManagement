@@ -30,11 +30,11 @@ public interface PaymentBatchRepository extends JpaRepository<PaymentBatch, Long
     List<PaymentBatch> findByCreatorIdAndActiveTrue(Long creatorId);
     Page<PaymentBatch> findByCreatorIdAndActiveTrue(Long creatorId, Pageable pageable);
 
-    // Find all with details
-    @Query("SELECT b FROM PaymentBatch b WHERE b.active = true")
+    // Find all with details - eagerly fetch creator to avoid LazyInitializationException
+    @Query("SELECT b FROM PaymentBatch b LEFT JOIN FETCH b.creator WHERE b.active = true")
     Page<PaymentBatch> findAllWithDetails(Pageable pageable);
 
-    // Find batches ready for download
-    @Query("SELECT b FROM PaymentBatch b WHERE b.status = 'FILE_GENERATED' AND b.downloadedDate IS NULL AND b.active = true")
+    // Find batches ready for download - eagerly fetch creator to avoid LazyInitializationException
+    @Query("SELECT b FROM PaymentBatch b LEFT JOIN FETCH b.creator WHERE b.status = 'FILE_GENERATED' AND b.downloadedDate IS NULL AND b.active = true")
     List<PaymentBatch> findBatchesReadyForDownload();
 }

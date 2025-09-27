@@ -88,6 +88,7 @@ public class User extends AuditableEntity {
     private Set<Role> roles = new HashSet<>();
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private UserBankDetails bankDetails;
 
     // Constructors
