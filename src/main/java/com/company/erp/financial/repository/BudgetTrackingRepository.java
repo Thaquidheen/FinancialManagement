@@ -121,14 +121,14 @@ public interface BudgetTrackingRepository extends JpaRepository<BudgetTracking, 
             "COALESCE(SUM(p.remainingBudget), 0), " +
             "COUNT(DISTINCT p.id) " +
             "FROM Project p WHERE p.active = true " +
-            "AND (:startDate IS NULL OR p.createdDate >= :startDate) " +
-            "AND (:endDate IS NULL OR p.createdDate <= :endDate)")
+            "AND (CAST(:startDate AS timestamp) IS NULL OR p.createdDate >= :startDate) " +
+            "AND (CAST(:endDate AS timestamp) IS NULL OR p.createdDate <= :endDate)")
     List<Object[]> getBudgetSummary(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
 
     @Query("SELECT p.id, p.name, p.allocatedBudget, p.spentAmount, p.remainingBudget " +
             "FROM Project p WHERE p.active = true " +
-            "AND (:startDate IS NULL OR p.createdDate >= :startDate) " +
-            "AND (:endDate IS NULL OR p.createdDate <= :endDate) " +
+            "AND (CAST(:startDate AS timestamp) IS NULL OR p.createdDate >= :startDate) " +
+            "AND (CAST(:endDate AS timestamp) IS NULL OR p.createdDate <= :endDate) " +
             "ORDER BY p.spentAmount DESC")
     List<Object[]> getProjectBudgetBreakdown(@Param("startDate") LocalDateTime startDate, @Param("endDate") LocalDateTime endDate);
 

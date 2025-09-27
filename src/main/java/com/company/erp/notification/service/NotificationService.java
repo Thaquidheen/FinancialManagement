@@ -16,11 +16,24 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
+
+import com.company.erp.notification.dto.response.NotificationResponse;
+import com.company.erp.notification.dto.request.SendNotificationRequest;
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVPrinter;
+import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 @Service
 @Transactional
@@ -450,6 +463,281 @@ public class NotificationService {
         
         notification.setActive(false);
         notificationRepository.save(notification);
+    }
+
+    // New enhanced notification management methods
+
+    /**
+     * Get paginated notifications with filters
+     */
+    @Transactional(readOnly = true)
+    public Page<NotificationResponse> getUserNotifications(Long userId, Boolean read, 
+                                                          String type, String priority, 
+                                                          Pageable pageable) {
+        Page<Notification> notifications;
+        
+        if (read != null || type != null || priority != null) {
+            // Use custom query with filters
+            notifications = notificationRepository.findByUserIdWithFilters(
+                    userId, read, type, priority, pageable);
+        } else {
+            // Get all active notifications
+            notifications = notificationRepository.findByUserIdAndActiveTrueOrderByCreatedDateDesc(
+                    userId, pageable);
+        }
+        
+        return notifications.map(this::convertToResponse);
+    }
+
+    /**
+     * Get notification statistics
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Object> getNotificationStatistics(Long userId) {
+        Map<String, Object> stats = new HashMap<>();
+        
+        stats.put("totalNotifications", notificationRepository.countByUserIdAndActiveTrue(userId));
+        stats.put("unreadCount", notificationRepository.countUnreadByUserId(userId));
+        stats.put("readCount", notificationRepository.countReadByUserId(userId));
+        
+        // Calculate today's count
+        LocalDateTime startOfDay = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0).withNano(0);
+        LocalDateTime endOfDay = startOfDay.plusDays(1);
+        stats.put("todayCount", notificationRepository.countTodayByUserId(userId, startOfDay, endOfDay));
+        
+        // Calculate week start (Monday)
+        LocalDateTime weekStart = LocalDateTime.now().minusDays(LocalDateTime.now().getDayOfWeek().getValue() - 1)
+                .withHour(0).withMinute(0).withSecond(0).withNano(0);
+        stats.put("thisWeekCount", notificationRepository.countThisWeekByUserId(userId, weekStart));
+        
+        // Notification types breakdown
+        Map<String, Long> typeBreakdown = notificationRepository.getNotificationTypeBreakdown(userId);
+        stats.put("typeBreakdown", typeBreakdown);
+        
+        return stats;
+    }
+
+    /**
+     * Get notification by ID
+     */
+    @Transactional(readOnly = true)
+    public NotificationResponse getNotificationById(Long notificationId, Long userId) {
+        Notification notification = notificationRepository.findByIdAndActiveTrue(notificationId)
+                .orElseThrow(() -> new RuntimeException("Notification not found"));
+        
+        if (!notification.getUser().getId().equals(userId)) {
+            throw new RuntimeException("Notification does not belong to user");
+        }
+        
+        return convertToResponse(notification);
+    }
+
+    /**
+     * Bulk delete notifications
+     */
+    @Transactional
+    public void bulkDeleteNotifications(List<Long> notificationIds, Long userId) {
+        List<Notification> notifications = notificationRepository.findByIdsAndUserId(notificationIds, userId);
+        
+        for (Notification notification : notifications) {
+            notification.setActive(false);
+        }
+        
+        notificationRepository.saveAll(notifications);
+        
+        auditService.logAction(userId, "BULK_DELETE_NOTIFICATIONS", "NOTIFICATION",
+                null, "Bulk deleted " + notifications.size() + " notifications", null, null);
+    }
+
+    /**
+     * Get notification preferences
+     */
+    @Transactional(readOnly = true)
+    public NotificationPreference getNotificationPreferences(Long userId) {
+        return preferenceRepository.findByUserId(userId)
+                .orElseGet(() -> createDefaultPreferences(userId));
+    }
+
+    /**
+     * Update notification preferences
+     */
+    @Transactional
+    public NotificationPreference updateNotificationPreferences(Long userId, 
+                                                               NotificationPreference preferences) {
+        NotificationPreference existing = preferenceRepository.findByUserId(userId)
+                .orElseGet(() -> createDefaultPreferences(userId));
+        
+        // Update fields
+        existing.setEmailEnabled(preferences.getEmailEnabled());
+        existing.setSmsEnabled(preferences.getSmsEnabled());
+        existing.setPushEnabled(preferences.getPushEnabled());
+        existing.setDoNotDisturbStart(preferences.getDoNotDisturbStart());
+        existing.setDoNotDisturbEnd(preferences.getDoNotDisturbEnd());
+        existing.setTimezone(preferences.getTimezone());
+        existing.setEnabledTypes(preferences.getEnabledTypes());
+        
+        NotificationPreference saved = preferenceRepository.save(existing);
+        
+        auditService.logAction(userId, "UPDATE_NOTIFICATION_PREFERENCES", "NOTIFICATION_PREFERENCE",
+                null, "Updated notification preferences", null, null);
+        
+        return saved;
+    }
+
+    /**
+     * Send test notification
+     */
+    @Transactional
+    public void sendTestNotification(SendNotificationRequest request, Long adminUserId) {
+        Long targetUserId = request.getUserId() != null ? request.getUserId() : adminUserId;
+        
+        // Send test notification
+        sendNotification(targetUserId, NotificationType.ANNOUNCEMENT, 
+                        Map.of("message", request.getMessage()), 
+                        NotificationPriority.NORMAL);
+        
+        auditService.logAction(adminUserId, "SEND_TEST_NOTIFICATION", "NOTIFICATION",
+                null, "Sent test notification to user: " + targetUserId, null, null);
+    }
+
+    /**
+     * Export notifications
+     */
+    @Transactional(readOnly = true)
+    public byte[] exportNotifications(Long userId, String format, Boolean read, String type) {
+        List<Notification> notifications;
+        
+        if (read != null || type != null) {
+            notifications = notificationRepository.findByUserIdWithFiltersForExport(userId, read, type);
+        } else {
+            notifications = notificationRepository.findByUserIdAndActiveTrueOrderByCreatedDateDesc(userId);
+        }
+        
+        if ("csv".equals(format)) {
+            return exportToCsv(notifications);
+        } else {
+            return exportToExcel(notifications);
+        }
+    }
+
+    /**
+     * Search notifications
+     */
+    @Transactional(readOnly = true)
+    public Page<NotificationResponse> searchNotifications(Long userId, String query, Pageable pageable) {
+        Page<Notification> notifications = notificationRepository.findByUserIdAndSearchTerm(
+                userId, query, pageable);
+        
+        return notifications.map(this::convertToResponse);
+    }
+
+    /**
+     * Convert Notification entity to response DTO
+     */
+    private NotificationResponse convertToResponse(Notification notification) {
+        NotificationResponse response = new NotificationResponse();
+        response.setId(notification.getId());
+        response.setTitle(notification.getTitle());
+        response.setMessage(notification.getMessage());
+        response.setType(notification.getType());
+        response.setPriority(notification.getPriority());
+        response.setChannel(notification.getChannel());
+        response.setRead(notification.getRead());
+        response.setReadAt(notification.getReadAt());
+        response.setSent(notification.getSent());
+        response.setSentAt(notification.getSentAt());
+        response.setCreatedAt(notification.getCreatedDate());
+        response.setActionUrl(notification.getActionUrl());
+        response.setActionLabel(notification.getActionLabel());
+        response.setReferenceType(notification.getReferenceType());
+        response.setReferenceId(notification.getReferenceId());
+        
+        return response;
+    }
+
+    /**
+     * Create default preferences for new user
+     */
+    private NotificationPreference createDefaultPreferences(Long userId) {
+        User user = userService.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        
+        NotificationPreference preferences = new NotificationPreference();
+        preferences.setUser(user);
+        preferences.setEmailEnabled(true);
+        preferences.setSmsEnabled(false);
+        preferences.setPushEnabled(true);
+        preferences.setDoNotDisturbStart(LocalTime.of(22, 0)); // 10 PM
+        preferences.setDoNotDisturbEnd(LocalTime.of(7, 0)); // 7 AM
+        preferences.setTimezone("Asia/Riyadh");
+        preferences.setEnabledTypes(Set.of(NotificationType.values()));
+        
+        return preferenceRepository.save(preferences);
+    }
+
+    /**
+     * Export notifications to CSV
+     */
+    private byte[] exportToCsv(List<Notification> notifications) {
+        try (StringWriter writer = new StringWriter();
+             CSVPrinter printer = new CSVPrinter(writer, CSVFormat.DEFAULT.builder()
+                     .setHeader("ID", "Title", "Message", "Type", "Priority", "Read", "Created Date")
+                     .build())) {
+            
+            for (Notification notification : notifications) {
+                printer.printRecord(
+                        notification.getId(),
+                        notification.getTitle(),
+                        notification.getMessage(),
+                        notification.getType(),
+                        notification.getPriority(),
+                        notification.getRead(),
+                        notification.getCreatedDate()
+                );
+            }
+            
+            return writer.toString().getBytes(StandardCharsets.UTF_8);
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to export notifications to CSV", e);
+        }
+    }
+
+    /**
+     * Export notifications to Excel
+     */
+    private byte[] exportToExcel(List<Notification> notifications) {
+        try (Workbook workbook = new XSSFWorkbook();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            
+            Sheet sheet = workbook.createSheet("Notifications");
+            
+            // Create header row
+            Row headerRow = sheet.createRow(0);
+            String[] headers = {"ID", "Title", "Message", "Type", "Priority", "Read", "Created Date"};
+            for (int i = 0; i < headers.length; i++) {
+                Cell cell = headerRow.createCell(i);
+                cell.setCellValue(headers[i]);
+            }
+            
+            // Create data rows
+            int rowNum = 1;
+            for (Notification notification : notifications) {
+                Row row = sheet.createRow(rowNum++);
+                row.createCell(0).setCellValue(notification.getId());
+                row.createCell(1).setCellValue(notification.getTitle());
+                row.createCell(2).setCellValue(notification.getMessage());
+                row.createCell(3).setCellValue(notification.getType().toString());
+                row.createCell(4).setCellValue(notification.getPriority().toString());
+                row.createCell(5).setCellValue(notification.getRead());
+                row.createCell(6).setCellValue(notification.getCreatedDate().toString());
+            }
+            
+            workbook.write(out);
+            return out.toByteArray();
+            
+        } catch (IOException e) {
+            throw new RuntimeException("Failed to export notifications to Excel", e);
+        }
     }
 }
 

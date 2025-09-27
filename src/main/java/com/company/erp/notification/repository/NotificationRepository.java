@@ -13,7 +13,9 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Repository
@@ -208,4 +210,89 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
             "ORDER BY n.createdDate DESC")
     List<Notification> findRecentActivityByUser(@Param("userId") Long userId,
                                                 @Param("since") LocalDateTime since);
+
+    // New methods for enhanced notification management
+
+    /**
+     * Find notifications with filters
+     */
+    @Query("SELECT n FROM Notification n WHERE n.user.id = :userId AND n.active = true " +
+            "AND (:read IS NULL OR n.read = :read) " +
+            "AND (:type IS NULL OR n.type = :type) " +
+            "AND (:priority IS NULL OR n.priority = :priority) " +
+            "ORDER BY n.createdDate DESC")
+    Page<Notification> findByUserIdWithFilters(@Param("userId") Long userId,
+                                              @Param("read") Boolean read,
+                                              @Param("type") String type,
+                                              @Param("priority") String priority,
+                                              Pageable pageable);
+
+    /**
+     * Count total notifications by user
+     */
+    @Query("SELECT COUNT(n) FROM Notification n WHERE n.user.id = :userId AND n.active = true")
+    long countByUserIdAndActiveTrue(@Param("userId") Long userId);
+
+    /**
+     * Count read notifications by user
+     */
+    @Query("SELECT COUNT(n) FROM Notification n WHERE n.user.id = :userId AND n.active = true AND n.read = true")
+    long countReadByUserId(@Param("userId") Long userId);
+
+    /**
+     * Count today's notifications
+     */
+    @Query("SELECT COUNT(n) FROM Notification n WHERE n.user.id = :userId AND n.active = true " +
+            "AND n.createdDate >= :startOfDay AND n.createdDate < :endOfDay")
+    long countTodayByUserId(@Param("userId") Long userId, 
+                           @Param("startOfDay") LocalDateTime startOfDay, 
+                           @Param("endOfDay") LocalDateTime endOfDay);
+
+    /**
+     * Count this week's notifications
+     */
+    @Query("SELECT COUNT(n) FROM Notification n WHERE n.user.id = :userId AND n.active = true " +
+            "AND n.createdDate >= :weekStart")
+    long countThisWeekByUserId(@Param("userId") Long userId, @Param("weekStart") LocalDateTime weekStart);
+
+    /**
+     * Get notification type breakdown
+     */
+    @Query("SELECT n.type as type, COUNT(n) as count FROM Notification n " +
+            "WHERE n.user.id = :userId AND n.active = true " +
+            "GROUP BY n.type")
+    List<Object[]> getNotificationTypeBreakdownRaw(@Param("userId") Long userId);
+
+    default Map<String, Long> getNotificationTypeBreakdown(Long userId) {
+        List<Object[]> results = getNotificationTypeBreakdownRaw(userId);
+        Map<String, Long> breakdown = new HashMap<>();
+        for (Object[] result : results) {
+            breakdown.put(result[0].toString(), (Long) result[1]);
+        }
+        return breakdown;
+    }
+
+    /**
+     * Find notifications by IDs and user ID
+     */
+    @Query("SELECT n FROM Notification n WHERE n.id IN :ids AND n.user.id = :userId AND n.active = true")
+    List<Notification> findByIdsAndUserId(@Param("ids") List<Long> ids, @Param("userId") Long userId);
+
+    /**
+     * Find notifications with filters for export
+     */
+    @Query("SELECT n FROM Notification n WHERE n.user.id = :userId AND n.active = true " +
+            "AND (:read IS NULL OR n.read = :read) " +
+            "AND (:type IS NULL OR n.type = :type) " +
+            "ORDER BY n.createdDate DESC")
+    List<Notification> findByUserIdWithFiltersForExport(@Param("userId") Long userId,
+                                                        @Param("read") Boolean read,
+                                                        @Param("type") String type);
+
+    /**
+     * Find all active notifications by user (for export)
+     */
+    @Query("SELECT n FROM Notification n WHERE n.user.id = :userId AND n.active = true " +
+            "ORDER BY n.createdDate DESC")
+    List<Notification> findByUserIdAndActiveTrueOrderByCreatedDateDesc(@Param("userId") Long userId);
 }

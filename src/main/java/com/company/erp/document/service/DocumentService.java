@@ -63,7 +63,7 @@ public class DocumentService {
     private final DocumentRepository documentRepository;
     private final DocumentMetadataRepository metadataRepository;
     private final DocumentTagRepository tagRepository;
-    private final FileStorageService fileStorageService;
+    // private final FileStorageService fileStorageService; // Not used in current implementation
     private final UserRepository userRepository;
     private final AuditService auditService;
     private final Tika tika = new Tika();
@@ -71,13 +71,11 @@ public class DocumentService {
     public DocumentService(DocumentRepository documentRepository,
                            DocumentMetadataRepository metadataRepository,
                            DocumentTagRepository tagRepository,
-                           FileStorageService fileStorageService,
                            UserRepository userRepository,
                            AuditService auditService) {
         this.documentRepository = documentRepository;
         this.metadataRepository = metadataRepository;
         this.tagRepository = tagRepository;
-        this.fileStorageService = fileStorageService;
         this.userRepository = userRepository;
         this.auditService = auditService;
     }
