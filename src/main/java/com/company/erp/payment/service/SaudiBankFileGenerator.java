@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -50,14 +51,14 @@ public class SaudiBankFileGenerator {
         String sheetName = getSanitizedBankName(bankName) + "_Payments";
         Sheet sheet = workbook.createSheet(sheetName);
 
-        // Set default column widths
+        // Set optimized column widths for Saudi bank format
         sheet.setColumnWidth(0, 4000);  // Bank
-        sheet.setColumnWidth(1, 5000);  // Account Number
+        sheet.setColumnWidth(1, 6000);  // Account Number (IBAN can be long)
         sheet.setColumnWidth(2, 3000);  // Amount
-        sheet.setColumnWidth(3, 8000);  // Comments
+        sheet.setColumnWidth(3, 10000); // Comments
         sheet.setColumnWidth(4, 6000);  // Employee Name
         sheet.setColumnWidth(5, 4000);  // National ID/Iqama
-        sheet.setColumnWidth(6, 10000); // Beneficiary Address
+        sheet.setColumnWidth(6, 12000); // Beneficiary Address
 
         return sheet;
     }
@@ -120,43 +121,51 @@ public class SaudiBankFileGenerator {
 
         int colNum = 0;
 
-        // Bank
+        // Column A: Bank
         Cell bankCell = row.createCell(colNum++);
-        bankCell.setCellValue(payment.getBankName());
+        bankCell.setCellValue(payment.getBankName() != null ? payment.getBankName() : "");
         bankCell.setCellStyle(textStyle);
 
-        // Account Number
+        // Column B: Account Number (IBAN preferred, fallback to account number)
         Cell accountCell = row.createCell(colNum++);
-        accountCell.setCellValue(payment.getAccountNumber());
+        String accountNumber = payment.getIban() != null ? 
+                              payment.getIban() : 
+                              payment.getAccountNumber();
+        accountCell.setCellValue(accountNumber != null ? accountNumber : "");
         accountCell.setCellStyle(textStyle);
 
-        // Amount (formatted for Saudi banks)
+        // Column C: Amount
         Cell amountCell = row.createCell(colNum++);
         amountCell.setCellValue(payment.getAmount().doubleValue());
         amountCell.setCellStyle(amountStyle);
 
-        // Comments (Quotation description)
+        // Column D: Comments
         Cell commentsCell = row.createCell(colNum++);
         String comments = generatePaymentComments(payment);
-        commentsCell.setCellValue(comments);
+        commentsCell.setCellValue(comments != null ? comments : "");
         commentsCell.setCellStyle(textStyle);
 
-        // Employee Name
+        // Column E: Employee Name
         Cell nameCell = row.createCell(colNum++);
-        nameCell.setCellValue(payment.getPayee().getFullName());
+        String employeeName = payment.getPayee().getFullName();
+        nameCell.setCellValue(employeeName != null ? employeeName : "");
         nameCell.setCellStyle(textStyle);
 
-        // National ID/Iqama ID
+        // Column F: National ID/Iqama ID
         Cell idCell = row.createCell(colNum++);
         String nationalId = payment.getPayee().getNationalId() != null ?
-                payment.getPayee().getNationalId() : payment.getPayee().getIqamaId();
+                           payment.getPayee().getNationalId() : 
+                           payment.getPayee().getIqamaId();
         idCell.setCellValue(nationalId != null ? nationalId : "");
         idCell.setCellStyle(textStyle);
 
-        // Beneficiary Address
+        // Column G: Beneficiary Address
         Cell addressCell = row.createCell(colNum++);
-        addressCell.setCellValue(payment.getBeneficiaryAddress() != null ?
-                payment.getBeneficiaryAddress() : "");
+        String address = payment.getBeneficiaryAddress() != null ?
+                        payment.getBeneficiaryAddress() : 
+                        (payment.getPayee().getBankDetails() != null ? 
+                         payment.getPayee().getBankDetails().getBeneficiaryAddress() : "");
+        addressCell.setCellValue(address != null ? address : "");
         addressCell.setCellStyle(textStyle);
     }
 
@@ -194,40 +203,62 @@ public class SaudiBankFileGenerator {
     }
 
     private void validatePaymentData(Payment payment) {
-        if (!payment.hasValidBankDetails()) {
-            throw new BusinessException("INVALID_BANK_DETAILS",
-                    "Payment " + payment.getId() + " has incomplete bank details");
-        }
-
+        List<String> errors = new ArrayList<>();
+        
+        // Validate required fields
         if (payment.getPayee() == null) {
-            throw new BusinessException("INVALID_PAYMENT_DATA",
-                    "Payment " + payment.getId() + " has no payee information");
+            errors.add("Payment must have a payee");
+        } else {
+            if (payment.getPayee().getFullName() == null || payment.getPayee().getFullName().trim().isEmpty()) {
+                errors.add("Employee name is required");
+            }
+            
+            if (payment.getIban() == null && payment.getAccountNumber() == null) {
+                errors.add("Account number or IBAN is required");
+            }
+            
+            if (payment.getPayee().getNationalId() == null && payment.getPayee().getIqamaId() == null) {
+                errors.add("National ID or Iqama ID is required");
+            }
         }
-
+        
         if (payment.getAmount() == null || payment.getAmount().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new BusinessException("INVALID_PAYMENT_AMOUNT",
-                    "Payment " + payment.getId() + " has invalid amount");
+            errors.add("Valid payment amount is required");
+        }
+        
+        if (payment.getBankName() == null || payment.getBankName().trim().isEmpty()) {
+            errors.add("Bank name is required");
+        }
+        
+        if (!errors.isEmpty()) {
+            throw new BusinessException("INVALID_PAYMENT_DATA", 
+                    "Payment validation failed: " + String.join(", ", errors));
         }
     }
 
     private String generatePaymentComments(Payment payment) {
+        // Create meaningful comments for the bank
         StringBuilder comments = new StringBuilder();
-
-        if (payment.getQuotation() != null) {
-            comments.append("Project: ").append(payment.getQuotation().getProject().getName());
-
-            if (payment.getQuotation().getDescription() != null &&
-                    !payment.getQuotation().getDescription().trim().isEmpty()) {
-                comments.append(" - ").append(payment.getQuotation().getDescription());
-            }
+        
+        if (payment.getComments() != null && !payment.getComments().trim().isEmpty()) {
+            comments.append(payment.getComments());
+        } else if (payment.getQuotation() != null) {
+            comments.append("Payment for quotation: ").append(payment.getQuotation().getDescription());
+        } else {
+            comments.append("Salary/Payment to ").append(payment.getPayee().getFullName());
         }
-
+        
+        // Add period/month if available
+        if (payment.getQuotation() != null && payment.getQuotation().getProject() != null) {
+            comments.append(" - ").append(payment.getQuotation().getProject().getName());
+        }
+        
         // Limit comments to 200 characters for bank compatibility
         String result = comments.toString();
         if (result.length() > 200) {
             result = result.substring(0, 197) + "...";
         }
-
+        
         return result.isEmpty() ? "Project Payment" : result;
     }
 
@@ -330,5 +361,62 @@ public class SaudiBankFileGenerator {
             return "0.00";
         }
         return String.format("%.2f", amount.doubleValue());
+    }
+
+    /**
+     * Create a sample Excel file for testing purposes
+     */
+    public byte[] createSampleExcelFile() {
+        logger.info("Creating sample Excel file for testing");
+
+        try (Workbook workbook = new XSSFWorkbook()) {
+            Sheet sheet = createMainSheet(workbook, "Sample Bank");
+            populateHeaders(sheet, "Sample Bank");
+            
+            // Add sample data rows
+            int rowNum = 4;
+            CellStyle amountStyle = createAmountStyle(workbook);
+            CellStyle textStyle = createTextStyle(workbook);
+
+            // Sample row 1
+            Row sampleRow1 = sheet.createRow(rowNum++);
+            sampleRow1.createCell(0).setCellValue("Al Rajhi Bank");
+            sampleRow1.createCell(1).setCellValue("SA442000000123456789012345");
+            sampleRow1.createCell(2).setCellValue(5000.00);
+            sampleRow1.createCell(3).setCellValue("Salary for September 2025");
+            sampleRow1.createCell(4).setCellValue("Ahmed Mohammed Al-Rashid");
+            sampleRow1.createCell(5).setCellValue("1234567890");
+            sampleRow1.createCell(6).setCellValue("Riyadh, Saudi Arabia");
+
+            // Sample row 2
+            Row sampleRow2 = sheet.createRow(rowNum++);
+            sampleRow2.createCell(0).setCellValue("Al Rajhi Bank");
+            sampleRow2.createCell(1).setCellValue("SA442000000123456789012346");
+            sampleRow2.createCell(2).setCellValue(3500.00);
+            sampleRow2.createCell(3).setCellValue("Project allowance");
+            sampleRow2.createCell(4).setCellValue("Sarah Abdullah");
+            sampleRow2.createCell(5).setCellValue("9876543210");
+            sampleRow2.createCell(6).setCellValue("Jeddah, Saudi Arabia");
+
+            // Apply styles to sample data
+            for (int i = 0; i < 2; i++) {
+                Row row = sheet.getRow(4 + i);
+                for (int j = 0; j < 7; j++) {
+                    Cell cell = row.getCell(j);
+                    if (j == 2) { // Amount column
+                        cell.setCellStyle(amountStyle);
+                    } else {
+                        cell.setCellStyle(textStyle);
+                    }
+                }
+            }
+
+            return convertWorkbookToBytes(workbook);
+
+        } catch (IOException e) {
+            logger.error("Error creating sample Excel file", e);
+            throw new BusinessException("SAMPLE_FILE_GENERATION_ERROR",
+                    "Failed to create sample file: " + e.getMessage());
+        }
     }
 }

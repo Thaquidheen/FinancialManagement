@@ -96,10 +96,24 @@ public class BankFileService {
     /**
      * Download bank file content
      */
-    @Transactional(readOnly = true)
     public byte[] downloadBankFile(Long batchId) {
         logger.info("Downloading bank file for batch: {}", batchId);
 
+        // First, read the file content (read-only operation)
+        byte[] fileContent = readBankFileContent(batchId);
+        
+        // Then, update download tracking (write operation)
+        updateDownloadTracking(batchId);
+
+        logger.info("Bank file downloaded successfully for batch: {}", batchId);
+        return fileContent;
+    }
+
+    /**
+     * Read bank file content (read-only operation)
+     */
+    @Transactional(readOnly = true)
+    private byte[] readBankFileContent(Long batchId) {
         PaymentBatch batch = paymentBatchRepository.findById(batchId)
                 .orElseThrow(() -> new ResourceNotFoundException("PaymentBatch", "id", batchId));
 
@@ -110,26 +124,29 @@ public class BankFileService {
 
         try {
             Path filePath = Paths.get(batch.getFilePath());
-            byte[] fileContent = Files.readAllBytes(filePath);
-
-            // Update download tracking
-            batch.markAsDownloaded();
-            paymentBatchRepository.save(batch);
-
-            // Update bank file download count
-                // Increment download count on the first active bank file for this batch
-                bankFileRepository.findFirstByBatchIdAndActiveTrue(batchId)
-                    .ifPresent(bankFile -> bankFileRepository.incrementDownloadCount(bankFile.getId()));
-
-            logger.info("Bank file downloaded successfully for batch: {}", batchId);
-
-            return fileContent;
-
+            return Files.readAllBytes(filePath);
         } catch (IOException e) {
             logger.error("Error reading bank file for batch: {}", batchId, e);
             throw new BusinessException("BANK_FILE_READ_ERROR",
                     "Failed to read bank file: " + e.getMessage());
         }
+    }
+
+    /**
+     * Update download tracking (write operation)
+     */
+    @Transactional
+    private void updateDownloadTracking(Long batchId) {
+        // Update batch download date
+        PaymentBatch batch = paymentBatchRepository.findById(batchId).orElse(null);
+        if (batch != null) {
+            batch.markAsDownloaded();
+            paymentBatchRepository.save(batch);
+        }
+
+        // Update bank file download count
+        bankFileRepository.findFirstByBatchIdAndActiveTrue(batchId)
+            .ifPresent(bankFile -> bankFileRepository.incrementDownloadCount(bankFile.getId()));
     }
 
     /**

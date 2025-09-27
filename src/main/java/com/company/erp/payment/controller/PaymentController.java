@@ -1,5 +1,7 @@
 package com.company.erp.payment.controller;
 
+import com.company.erp.common.exception.BusinessException;
+import com.company.erp.common.exception.ResourceNotFoundException;
 import com.company.erp.payment.dto.request.ConfirmPaymentRequest;
 import com.company.erp.payment.dto.request.GenerateBankFileRequest;
 import com.company.erp.payment.dto.response.BankFileResponse;
@@ -31,6 +33,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -95,8 +98,10 @@ public class PaymentController {
             description = "Download the generated Excel file for bank processing")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "File downloaded successfully"),
-            @ApiResponse(responseCode = "404", description = "Bank file not found"),
-            @ApiResponse(responseCode = "403", description = "Access denied")
+            @ApiResponse(responseCode = "400", description = "Business error - bank file not generated or invalid batch"),
+            @ApiResponse(responseCode = "404", description = "Payment batch not found"),
+            @ApiResponse(responseCode = "403", description = "Access denied"),
+            @ApiResponse(responseCode = "500", description = "Internal server error")
     })
     @GetMapping("/download-bank-file/{batchId}")
     @PreAuthorize("hasAuthority('ACCOUNT_MANAGER') or hasAuthority('SUPER_ADMIN')")
@@ -105,15 +110,28 @@ public class PaymentController {
 
         logger.info("Downloading bank file for batch: {}", batchId);
 
-        byte[] fileContent = bankFileService.downloadBankFile(batchId);
-        String fileName = bankFileService.getBankFileName(batchId);
+        try {
+            byte[] fileContent = bankFileService.downloadBankFile(batchId);
+            String fileName = bankFileService.getBankFileName(batchId);
 
-        ByteArrayResource resource = new ByteArrayResource(fileContent);
+            ByteArrayResource resource = new ByteArrayResource(fileContent);
 
-        return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
-                .body(resource);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, 
+                            "attachment; filename=\"" + fileName + "\"")
+                    .body(resource);
+
+        } catch (ResourceNotFoundException e) {
+            logger.error("Payment batch not found: {}", batchId, e);
+            return ResponseEntity.notFound().build();
+        } catch (BusinessException e) {
+            logger.error("Business error downloading bank file for batch: {}", batchId, e);
+            return ResponseEntity.badRequest().build();
+        } catch (Exception e) {
+            logger.error("Unexpected error downloading bank file for batch: {}", batchId, e);
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     @Operation(summary = "Confirm payment sent to bank",
@@ -308,13 +326,21 @@ public class PaymentController {
         logger.debug("Fetching payment dashboard data");
 
         PaymentService.PaymentStatistics stats = paymentService.getPaymentStatistics();
+        
+        // Get recent payments
+        Pageable recentPageable = PageRequest.of(0, 10, Sort.by("createdDate").descending());
+        Page<PaymentSummaryResponse> recentPayments = paymentService.getPaymentsReadyForProcessing(recentPageable);
+        
+        // Get pending batches
+        Pageable batchPageable = PageRequest.of(0, 5, Sort.by("createdDate").descending());
+        Page<PaymentBatch> pendingBatches = paymentService.getPaymentBatches(batchPageable);
 
         Map<String, Object> dashboard = new HashMap<>();
         dashboard.put("statistics", stats);
-        dashboard.put("pendingPayments", stats.getPendingPayments());
-        dashboard.put("processingPayments", stats.getProcessingPayments());
-        dashboard.put("completedPayments", stats.getCompletedPayments());
-        dashboard.put("totalPendingAmount", stats.getTotalPendingAmount());
+        dashboard.put("recentPayments", recentPayments.getContent());
+        dashboard.put("pendingBatches", pendingBatches.getContent());
+        dashboard.put("alerts", new ArrayList<>()); // Empty alerts for now
+        // Quick actions will be generated on frontend based on statistics
 
         return ResponseEntity.ok(dashboard);
     }
