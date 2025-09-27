@@ -7,7 +7,6 @@ import java.util.List;
 
 public class ConfirmPaymentRequest {
 
-    @NotEmpty(message = "At least one payment ID is required")
     private List<Long> paymentIds;
 
     @Size(max = 100, message = "Bank reference must not exceed 100 characters")
@@ -15,6 +14,8 @@ public class ConfirmPaymentRequest {
 
     @Size(max = 1000, message = "Comments must not exceed 1000 characters")
     private String comments;
+
+    private String batchId;
 
     // Constructors
     public ConfirmPaymentRequest() {}
@@ -28,4 +29,7 @@ public class ConfirmPaymentRequest {
 
     public String getComments() { return comments; }
     public void setComments(String comments) { this.comments = comments; }
+
+    public String getBatchId() { return batchId; }
+    public void setBatchId(String batchId) { this.batchId = batchId; }
 }

@@ -39,7 +39,7 @@ public class BudgetTrackingController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ACCOUNT_MANAGER')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN') or hasAuthority('ACCOUNT_MANAGER')")
     @Operation(summary = "Create budget tracking entry", description = "Create a new budget tracking entry")
     public ResponseEntity<ApiResponse<BudgetTrackingResponse>> createBudgetTracking(
             @Valid @RequestBody BudgetTrackingRequest request,
@@ -51,7 +51,7 @@ public class BudgetTrackingController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ACCOUNT_MANAGER') or hasRole('PROJECT_MANAGER')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN') or hasAuthority('ACCOUNT_MANAGER') or hasAuthority('PROJECT_MANAGER')")
     @Operation(summary = "Get budget tracking by ID", description = "Retrieve a specific budget tracking entry")
     public ResponseEntity<ApiResponse<BudgetTrackingResponse>> getBudgetTrackingById(@PathVariable Long id) {
         BudgetTrackingResponse response = budgetTrackingService.getBudgetTrackingById(id);
@@ -59,8 +59,8 @@ public class BudgetTrackingController {
     }
 
     @GetMapping("/project/{projectId}")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ACCOUNT_MANAGER') or " +
-            "(hasRole('PROJECT_MANAGER') and @projectService.isProjectManager(#projectId, authentication.principal.id))")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN') or hasAuthority('ACCOUNT_MANAGER') or " +
+            "(hasAuthority('PROJECT_MANAGER') and @projectService.isProjectManager(#projectId, authentication.principal.id))")
     @Operation(summary = "Get project budget tracking", description = "Retrieve budget tracking for a specific project")
     public ResponseEntity<ApiResponse<Page<BudgetTrackingResponse>>> getProjectBudgetTracking(
             @PathVariable Long projectId,
@@ -75,8 +75,8 @@ public class BudgetTrackingController {
     }
 
     @GetMapping("/status/{projectId}")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ACCOUNT_MANAGER') or " +
-            "(hasRole('PROJECT_MANAGER') and @projectService.isProjectManager(#projectId, authentication.principal.id))")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN') or hasAuthority('ACCOUNT_MANAGER') or " +
+            "(hasAuthority('PROJECT_MANAGER') and @projectService.isProjectManager(#projectId, authentication.principal.id))")
     @Operation(summary = "Get project budget status", description = "Get current budget status and utilization for a project")
     public ResponseEntity<ApiResponse<BudgetStatusResponse>> getProjectBudgetStatus(@PathVariable Long projectId) {
         BudgetStatusResponse response = budgetTrackingService.getProjectBudgetStatus(projectId);
@@ -84,8 +84,8 @@ public class BudgetTrackingController {
     }
 
     @GetMapping("/variance/{projectId}")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ACCOUNT_MANAGER') or " +
-            "(hasRole('PROJECT_MANAGER') and @projectService.isProjectManager(#projectId, authentication.principal.id))")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN') or hasAuthority('ACCOUNT_MANAGER') or " +
+            "(hasAuthority('PROJECT_MANAGER') and @projectService.isProjectManager(#projectId, authentication.principal.id))")
     @Operation(summary = "Get budget variance analysis", description = "Get detailed budget variance analysis for a project")
     public ResponseEntity<ApiResponse<BudgetVarianceResponse>> getBudgetVarianceAnalysis(@PathVariable Long projectId) {
         BudgetVarianceResponse response = budgetTrackingService.getBudgetVarianceAnalysis(projectId);
@@ -93,7 +93,7 @@ public class BudgetTrackingController {
     }
 
     @GetMapping("/alerts")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ACCOUNT_MANAGER')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN') or hasAuthority('ACCOUNT_MANAGER')")
     @Operation(summary = "Get budget alerts", description = "Retrieve active budget alerts and warnings")
     public ResponseEntity<ApiResponse<List<BudgetAlertResponse>>> getBudgetAlerts(
             @RequestParam(required = false, defaultValue = "80") BigDecimal warningThreshold,
@@ -104,8 +104,8 @@ public class BudgetTrackingController {
     }
 
     @GetMapping("/alerts/project/{projectId}")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ACCOUNT_MANAGER') or " +
-            "(hasRole('PROJECT_MANAGER') and @projectService.isProjectManager(#projectId, authentication.principal.id))")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN') or hasAuthority('ACCOUNT_MANAGER') or " +
+            "(hasAuthority('PROJECT_MANAGER') and @projectService.isProjectManager(#projectId, authentication.principal.id))")
     @Operation(summary = "Get project budget alerts", description = "Get budget alerts for a specific project")
     public ResponseEntity<ApiResponse<List<BudgetAlertResponse>>> getProjectBudgetAlerts(
             @PathVariable Long projectId,
@@ -116,7 +116,7 @@ public class BudgetTrackingController {
     }
 
     @GetMapping("/summary")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ACCOUNT_MANAGER')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN') or hasAuthority('ACCOUNT_MANAGER')")
     @Operation(summary = "Get budget summary", description = "Get overall budget summary across all projects")
     public ResponseEntity<ApiResponse<Object>> getBudgetSummary(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
@@ -127,7 +127,7 @@ public class BudgetTrackingController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ACCOUNT_MANAGER')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN') or hasAuthority('ACCOUNT_MANAGER')")
     @Operation(summary = "Update budget tracking", description = "Update an existing budget tracking entry")
     public ResponseEntity<ApiResponse<BudgetTrackingResponse>> updateBudgetTracking(
             @PathVariable Long id,
@@ -139,7 +139,7 @@ public class BudgetTrackingController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
     @Operation(summary = "Delete budget tracking", description = "Delete a budget tracking entry")
     public ResponseEntity<ApiResponse<Void>> deleteBudgetTracking(@PathVariable Long id) {
         budgetTrackingService.deleteBudgetTracking(id);
@@ -147,7 +147,7 @@ public class BudgetTrackingController {
     }
 
     @PostMapping("/recalculate/{projectId}")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ACCOUNT_MANAGER')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN') or hasAuthority('ACCOUNT_MANAGER')")
     @Operation(summary = "Recalculate project budget", description = "Recalculate budget tracking for a project")
     public ResponseEntity<ApiResponse<BudgetStatusResponse>> recalculateProjectBudget(
             @PathVariable Long projectId,
@@ -158,8 +158,8 @@ public class BudgetTrackingController {
     }
 
     @GetMapping("/export/{projectId}")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ACCOUNT_MANAGER') or " +
-            "(hasRole('PROJECT_MANAGER') and @projectService.isProjectManager(#projectId, authentication.principal.id))")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN') or hasAuthority('ACCOUNT_MANAGER') or " +
+            "(hasAuthority('PROJECT_MANAGER') and @projectService.isProjectManager(#projectId, authentication.principal.id))")
     @Operation(summary = "Export budget tracking", description = "Export budget tracking data for a project")
     public ResponseEntity<ApiResponse<String>> exportBudgetTracking(
             @PathVariable Long projectId,

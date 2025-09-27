@@ -43,7 +43,7 @@ public class FinancialReportController {
     }
 
     @GetMapping("/dashboard")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ACCOUNT_MANAGER')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN') or hasAuthority('ACCOUNT_MANAGER')")
     @Operation(summary = "Get financial dashboard", description = "Retrieve financial dashboard with key metrics")
     public ResponseEntity<ApiResponse<FinancialDashboardResponse>> getFinancialDashboard(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
@@ -56,7 +56,7 @@ public class FinancialReportController {
     }
 
     @GetMapping("/dashboard/project-manager")
-    @PreAuthorize("hasRole('PROJECT_MANAGER')")
+    @PreAuthorize("hasAuthority('PROJECT_MANAGER')")
     @Operation(summary = "Get project manager dashboard", description = "Retrieve dashboard for project manager's projects")
     public ResponseEntity<ApiResponse<FinancialDashboardResponse>> getProjectManagerDashboard(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
@@ -69,7 +69,7 @@ public class FinancialReportController {
     }
 
     @PostMapping("/generate")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ACCOUNT_MANAGER')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN') or hasAuthority('ACCOUNT_MANAGER')")
     @Operation(summary = "Generate financial report", description = "Generate detailed financial report based on criteria")
     public ResponseEntity<ApiResponse<FinancialReportResponse>> generateFinancialReport(
             @Valid @RequestBody ReportRequest request,
@@ -80,7 +80,7 @@ public class FinancialReportController {
     }
 
     @GetMapping("/budget-utilization")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ACCOUNT_MANAGER')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN') or hasAuthority('ACCOUNT_MANAGER')")
     @Operation(summary = "Get budget utilization report", description = "Get budget utilization across all projects")
     public ResponseEntity<ApiResponse<Object>> getBudgetUtilizationReport(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
@@ -92,7 +92,7 @@ public class FinancialReportController {
     }
 
     @GetMapping("/spending-trends")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ACCOUNT_MANAGER')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN') or hasAuthority('ACCOUNT_MANAGER')")
     @Operation(summary = "Get spending trends", description = "Get spending trends and patterns analysis")
     public ResponseEntity<ApiResponse<Object>> getSpendingTrends(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
@@ -105,7 +105,7 @@ public class FinancialReportController {
     }
 
     @GetMapping("/cost-analysis")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ACCOUNT_MANAGER')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN') or hasAuthority('ACCOUNT_MANAGER')")
     @Operation(summary = "Get cost analysis", description = "Get detailed cost analysis by categories and projects")
     public ResponseEntity<ApiResponse<Object>> getCostAnalysis(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
@@ -118,7 +118,7 @@ public class FinancialReportController {
     }
 
     @GetMapping("/variance-analysis")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ACCOUNT_MANAGER')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN') or hasAuthority('ACCOUNT_MANAGER')")
     @Operation(summary = "Get variance analysis", description = "Get budget vs actual variance analysis")
     public ResponseEntity<ApiResponse<Object>> getVarianceAnalysis(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
@@ -130,7 +130,7 @@ public class FinancialReportController {
     }
 
     @GetMapping("/forecasting")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ACCOUNT_MANAGER')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN') or hasAuthority('ACCOUNT_MANAGER')")
     @Operation(summary = "Get financial forecasting", description = "Get financial forecasts and predictions")
     public ResponseEntity<ApiResponse<Object>> getFinancialForecasting(
             @RequestParam(required = false) List<Long> projectIds,
@@ -142,7 +142,7 @@ public class FinancialReportController {
     }
 
     @GetMapping("/executive-summary")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN')")
     @Operation(summary = "Get executive summary", description = "Get executive-level financial summary")
     public ResponseEntity<ApiResponse<Object>> getExecutiveSummary(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
@@ -153,7 +153,7 @@ public class FinancialReportController {
     }
 
     @GetMapping("/audit-trail")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ACCOUNT_MANAGER')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN') or hasAuthority('ACCOUNT_MANAGER')")
     @Operation(summary = "Get audit trail", description = "Get detailed audit trail for financial transactions")
     public ResponseEntity<ApiResponse<Object>> getAuditTrail(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
@@ -167,7 +167,7 @@ public class FinancialReportController {
     }
 
     @PostMapping("/export")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ACCOUNT_MANAGER')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN') or hasAuthority('ACCOUNT_MANAGER')")
     @Operation(summary = "Export financial report", description = "Export financial report in various formats")
     public ResponseEntity<ApiResponse<String>> exportFinancialReport(
             @Valid @RequestBody ReportRequest request,
@@ -179,7 +179,7 @@ public class FinancialReportController {
     }
 
     @GetMapping("/kpis")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ACCOUNT_MANAGER')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN') or hasAuthority('ACCOUNT_MANAGER')")
     @Operation(summary = "Get financial KPIs", description = "Get key performance indicators for financial metrics")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getFinancialKPIs(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
@@ -190,7 +190,7 @@ public class FinancialReportController {
     }
 
     @GetMapping("/performance-metrics")
-    @PreAuthorize("hasRole('SUPER_ADMIN') or hasRole('ACCOUNT_MANAGER')")
+    @PreAuthorize("hasAuthority('SUPER_ADMIN') or hasAuthority('ACCOUNT_MANAGER')")
     @Operation(summary = "Get performance metrics", description = "Get financial performance metrics")
     public ResponseEntity<ApiResponse<Object>> getPerformanceMetrics(
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
