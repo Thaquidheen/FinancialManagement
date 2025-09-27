@@ -260,13 +260,36 @@ public class PaymentService {
         validatePaymentAccess(currentUser);
 
         PaymentStatistics stats = new PaymentStatistics();
-        stats.setPendingPayments(paymentRepository.countByStatus(PaymentStatus.PENDING));
-        stats.setProcessingPayments(paymentRepository.countByStatus(PaymentStatus.PROCESSING));
+        
+        // Count pending payments (PENDING + READY_FOR_PAYMENT)
+        long pendingCount = paymentRepository.countByStatus(PaymentStatus.PENDING) + 
+                           paymentRepository.countByStatus(PaymentStatus.READY_FOR_PAYMENT);
+        stats.setPendingPayments(pendingCount);
+        
+        // Count processing payments (PROCESSING + FILE_GENERATED + SENT_TO_BANK)
+        long processingCount = paymentRepository.countByStatus(PaymentStatus.PROCESSING) +
+                              paymentRepository.countByStatus(PaymentStatus.FILE_GENERATED) +
+                              paymentRepository.countByStatus(PaymentStatus.SENT_TO_BANK);
+        stats.setProcessingPayments(processingCount);
+        
+        // Count completed payments
         stats.setCompletedPayments(paymentRepository.countByStatus(PaymentStatus.PAID));
-        stats.setFailedPayments(paymentRepository.countByStatus(PaymentStatus.FAILED));
+        
+        // Count failed payments (FAILED + CANCELLED)
+        long failedCount = paymentRepository.countByStatus(PaymentStatus.FAILED) +
+                          paymentRepository.countByStatus(PaymentStatus.CANCELLED);
+        stats.setFailedPayments(failedCount);
 
-        stats.setTotalPendingAmount(paymentRepository.getTotalAmountByStatus(PaymentStatus.PENDING));
-        stats.setTotalProcessingAmount(paymentRepository.getTotalAmountByStatus(PaymentStatus.PROCESSING));
+        // Calculate amounts
+        BigDecimal pendingAmount = paymentRepository.getTotalAmountByStatus(PaymentStatus.PENDING)
+                .add(paymentRepository.getTotalAmountByStatus(PaymentStatus.READY_FOR_PAYMENT));
+        stats.setTotalPendingAmount(pendingAmount);
+        
+        BigDecimal processingAmount = paymentRepository.getTotalAmountByStatus(PaymentStatus.PROCESSING)
+                .add(paymentRepository.getTotalAmountByStatus(PaymentStatus.FILE_GENERATED))
+                .add(paymentRepository.getTotalAmountByStatus(PaymentStatus.SENT_TO_BANK));
+        stats.setTotalProcessingAmount(processingAmount);
+        
         stats.setTotalCompletedAmount(paymentRepository.getTotalAmountByStatus(PaymentStatus.PAID));
 
         return stats;

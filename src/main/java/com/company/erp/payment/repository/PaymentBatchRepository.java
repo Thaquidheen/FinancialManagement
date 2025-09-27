@@ -31,7 +31,7 @@ public interface PaymentBatchRepository extends JpaRepository<PaymentBatch, Long
     Page<PaymentBatch> findByCreatorIdAndActiveTrue(Long creatorId, Pageable pageable);
 
     // Find all with details
-    @Query("SELECT b FROM PaymentBatch b LEFT JOIN FETCH b.creator WHERE b.active = true")
+    @Query("SELECT b FROM PaymentBatch b WHERE b.active = true")
     Page<PaymentBatch> findAllWithDetails(Pageable pageable);
 
     // Find batches ready for download

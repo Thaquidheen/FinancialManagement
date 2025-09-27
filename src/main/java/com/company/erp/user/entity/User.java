@@ -1,6 +1,7 @@
 package com.company.erp.user.entity;
 
 import com.company.erp.common.entity.AuditableEntity;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -83,6 +84,7 @@ public class User extends AuditableEntity {
     @JoinTable(name = "user_roles",
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id"))
+    @JsonIgnore
     private Set<Role> roles = new HashSet<>();
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
@@ -282,6 +284,27 @@ public class User extends AuditableEntity {
         if (bankDetails != null) {
             bankDetails.setUser(this);
         }
+    }
+
+    // Convenience methods for bank details access
+    public String getBankName() {
+        return bankDetails != null ? bankDetails.getBankName() : null;
+    }
+
+    public String getAccountNumber() {
+        return bankDetails != null ? bankDetails.getAccountNumber() : null;
+    }
+
+    public String getIban() {
+        return bankDetails != null ? bankDetails.getIban() : null;
+    }
+
+    public String getAddress() {
+        return bankDetails != null ? bankDetails.getBeneficiaryAddress() : null;
+    }
+
+    public boolean hasBankDetails() {
+        return bankDetails != null && bankDetails.isComplete();
     }
 
     @Override

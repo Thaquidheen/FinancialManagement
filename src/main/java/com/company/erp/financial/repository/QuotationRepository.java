@@ -149,4 +149,58 @@ public interface QuotationRepository extends JpaRepository<Quotation, Long> {
     @Query("SELECT q FROM Quotation q LEFT JOIN FETCH q.project LEFT JOIN FETCH q.createdBy " +
             "WHERE q.status IN :statuses AND q.active = true")
     Page<Quotation> findByStatusInWithProject(@Param("statuses") List<QuotationStatus> statuses, Pageable pageable);
+
+    // Additional methods without active status checks
+    /**
+     * Find approved quotations that don't have payments created yet
+     */
+    @Query("SELECT q FROM Quotation q " +
+           "LEFT JOIN FETCH q.project " +
+           "LEFT JOIN FETCH q.creator " +
+           "WHERE q.status = 'APPROVED' " +
+           "AND NOT EXISTS (SELECT p FROM Payment p WHERE p.quotation.id = q.id) " +
+           "ORDER BY q.approvedDate DESC")
+    Page<Quotation> findApprovedQuotationsWithoutPaymentsSimple(Pageable pageable);
+
+    /**
+     * Find quotations by status
+     */
+    @Query("SELECT q FROM Quotation q " +
+           "LEFT JOIN FETCH q.project " +
+           "LEFT JOIN FETCH q.creator " +
+           "WHERE q.status IN :statuses " +
+           "ORDER BY q.createdDate DESC")
+    Page<Quotation> findByStatusIn(@Param("statuses") List<QuotationStatus> statuses, Pageable pageable);
+
+    /**
+     * Find quotation with project and items (without active check)
+     */
+    @Query("SELECT q FROM Quotation q " +
+           "LEFT JOIN FETCH q.project " +
+           "LEFT JOIN FETCH q.creator " +
+           "LEFT JOIN FETCH q.items " +
+           "WHERE q.id = :id")
+    Optional<Quotation> findByIdWithProjectAndItemsSimple(@Param("id") Long id);
+
+    /**
+     * Find quotations by creator (project manager)
+     */
+    Page<Quotation> findByCreatorIdOrderByCreatedDateDesc(Long creatorId, Pageable pageable);
+
+    /**
+     * Find quotations by project
+     */
+    Page<Quotation> findByProjectIdOrderByCreatedDateDesc(Long projectId, Pageable pageable);
+
+    /**
+     * Count quotations by status (without active check)
+     */
+    @Query("SELECT COUNT(q) FROM Quotation q WHERE q.status = :status")
+    long countByStatusSimple(@Param("status") QuotationStatus status);
+
+    /**
+     * Get total amount by status
+     */
+    @Query("SELECT COALESCE(SUM(q.totalAmount), 0) FROM Quotation q WHERE q.status = :status")
+    BigDecimal getTotalAmountByStatus(@Param("status") QuotationStatus status);
 }

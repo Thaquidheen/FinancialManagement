@@ -2,6 +2,7 @@ package com.company.erp.payment.entity;
 
 import com.company.erp.common.entity.AuditableEntity;
 import com.company.erp.user.entity.User;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -38,7 +39,7 @@ public class PaymentBatch extends AuditableEntity {
     private PaymentBatchStatus status = PaymentBatchStatus.DRAFT;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by_user_id", nullable = false)
+    @JoinColumn(name = "creator_id", nullable = false)
     private User creator;
 
     @Column(name = "file_name", length = 200)
@@ -63,6 +64,7 @@ public class PaymentBatch extends AuditableEntity {
     private String processingNotes;
 
     @OneToMany(mappedBy = "batch", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
     private List<Payment> payments = new ArrayList<>();
 
     // Constructors

@@ -10,11 +10,16 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
+    boolean existsByQuotationId(Long quotationId);
+
+    Optional<Payment> findByQuotationId(Long quotationId);
     // Find payments by status
     List<Payment> findByStatusAndActiveTrue(PaymentStatus status);
     Page<Payment> findByStatusAndActiveTrue(PaymentStatus status, Pageable pageable);
@@ -28,11 +33,12 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     @Query("SELECT p FROM Payment p LEFT JOIN FETCH p.quotation q LEFT JOIN FETCH q.project LEFT JOIN FETCH p.payee " +
             "WHERE p.status IN :statuses AND p.active = true")
     Page<Payment> findByStatusInWithDetails(@Param("statuses") List<PaymentStatus> statuses, Pageable pageable);
-
+    Page<Payment> findByStatusOrderByCreatedDateDesc(PaymentStatus status, Pageable pageable);
     // Find payments by payee
+
     List<Payment> findByPayeeIdAndActiveTrue(Long payeeId);
     Page<Payment> findByPayeeIdAndActiveTrue(Long payeeId, Pageable pageable);
-
+    Page<Payment> findByBankNameContainingIgnoreCaseOrderByCreatedDateDesc(String bankName, Pageable pageable);
     // Find payments by bank
     List<Payment> findByBankNameAndActiveTrue(String bankName);
     Page<Payment> findByBankNameAndActiveTrue(String bankName, Pageable pageable);
@@ -51,6 +57,11 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     // Find failed payments that can be retried
     @Query("SELECT p FROM Payment p WHERE p.status = 'FAILED' AND p.retryCount < 3 AND p.active = true")
     List<Payment> findFailedPaymentsForRetry();
+    List<Payment> findByBatchIdOrderByCreatedDateDesc(Long batchId);
+    @Query("SELECT p FROM Payment p WHERE p.createdDate BETWEEN :startDate AND :endDate ORDER BY p.createdDate DESC")
+    Page<Payment> findByCreatedDateBetween(@Param("startDate") LocalDateTime startDate,
+                                           @Param("endDate") LocalDateTime endDate,
+                                           Pageable pageable);
 
     // Find payments ready for processing by bank
     @Query("SELECT p FROM Payment p LEFT JOIN FETCH p.quotation q LEFT JOIN FETCH q.project " +

@@ -7,6 +7,9 @@ import com.company.erp.common.security.UserPrincipal;
 import com.company.erp.financial.entity.Quotation;
 import com.company.erp.financial.entity.QuotationStatus;
 import com.company.erp.financial.repository.QuotationRepository;
+import com.company.erp.payment.entity.Payment;
+import com.company.erp.payment.entity.PaymentStatus;
+import com.company.erp.payment.repository.PaymentRepository;
 import com.company.erp.user.entity.User;
 import com.company.erp.user.repository.UserRepository;
 import com.company.erp.workflow.dto.request.ApprovalRequest;
@@ -44,8 +47,13 @@ public class ApprovalService {
     @Autowired
     private QuotationRepository quotationRepository;
 
+
+
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private PaymentRepository paymentRepository;
 
     /**
      * Process single approval decision
@@ -61,10 +69,7 @@ public class ApprovalService {
                 .orElseThrow(() -> new ResourceNotFoundException("Quotation", "id", request.getQuotationId()));
 
         // Validate quotation can be processed
-        if (!quotation.isSubmitted()) {
-            throw new BusinessException("QUOTATION_NOT_SUBMITTABLE",
-                    "Quotation cannot be processed in " + quotation.getStatus() + " status");
-        }
+        validateQuotationCanBeProcessed(quotation, request.getAction());
 
         User approver = getUserById(currentUser.getId());
 
@@ -76,19 +81,36 @@ public class ApprovalService {
         // Process the approval action
         switch (request.getAction().toUpperCase()) {
             case "APPROVE":
+                if (!quotation.canBeApproved()) {
+                    throw new BusinessException("QUOTATION_NOT_APPROVABLE",
+                            "Quotation cannot be approved in " + quotation.getStatus() + " status");
+                }
                 approval.approve(request.getComments());
                 quotation.approve(approver);
                 updateProjectBudget(quotation);
-                logger.info("Quotation {} approved by {}", quotation.getId(), approver.getFullName());
+
+                // **FIX: CREATE PAYMENT WHEN QUOTATION IS APPROVED**
+                createPaymentFromApprovedQuotation(quotation);
+
+                logger.info("Quotation {} approved by {} and payment created",
+                        quotation.getId(), approver.getFullName());
                 break;
 
             case "REJECT":
+                if (!quotation.canBeRejected()) {
+                    throw new BusinessException("QUOTATION_NOT_REJECTABLE",
+                            "Quotation cannot be rejected in " + quotation.getStatus() + " status");
+                }
                 approval.reject(request.getComments());
                 quotation.reject(approver, request.getComments());
                 logger.info("Quotation {} rejected by {}", quotation.getId(), approver.getFullName());
                 break;
 
             case "CHANGES_REQUESTED":
+                if (!quotation.canBeApproved()) {
+                    throw new BusinessException("QUOTATION_NOT_EDITABLE",
+                            "Cannot request changes for quotation in " + quotation.getStatus() + " status");
+                }
                 approval.requestChanges(request.getComments());
                 quotation.setStatus(QuotationStatus.UNDER_REVIEW);
                 logger.info("Changes requested for quotation {} by {}", quotation.getId(), approver.getFullName());
@@ -99,15 +121,93 @@ public class ApprovalService {
                         "Invalid approval action: " + request.getAction());
         }
 
+        // Save approval and quotation
         approvalRepository.save(approval);
         quotationRepository.save(quotation);
 
-        // TODO: Send notification to project manager
-        logger.info("Notification would be sent to project manager for quotation {}", quotation.getId());
+        logger.info("Approval processed successfully for quotation {}", quotation.getId());
 
         return convertToApprovalResponse(approval);
     }
 
+
+    private void validateQuotationCanBeProcessed(Quotation quotation, String action) {
+        QuotationStatus status = quotation.getStatus();
+
+        switch (action.toUpperCase()) {
+            case "APPROVE":
+                if (status == QuotationStatus.APPROVED) {
+                    throw new BusinessException("QUOTATION_ALREADY_APPROVED",
+                            "Quotation is already approved and cannot be approved again");
+                }
+                if (!quotation.canBeApproved()) {
+                    throw new BusinessException("QUOTATION_NOT_APPROVABLE",
+                            "Quotation cannot be approved in " + status + " status");
+                }
+                break;
+
+            case "REJECT":
+                if (status == QuotationStatus.APPROVED) {
+                    throw new BusinessException("QUOTATION_ALREADY_APPROVED",
+                            "Quotation is already approved and cannot be rejected");
+                }
+                if (!quotation.canBeRejected()) {
+                    throw new BusinessException("QUOTATION_NOT_REJECTABLE",
+                            "Quotation cannot be rejected in " + status + " status");
+                }
+                break;
+        }
+    }
+
+
+
+    private void createPaymentFromApprovedQuotation(Quotation quotation) {
+        logger.info("Creating payment for approved quotation {}", quotation.getId());
+
+        // Check if payment already exists
+        boolean paymentExists = paymentRepository.existsByQuotationId(quotation.getId());
+        if (paymentExists) {
+            logger.warn("Payment already exists for quotation {}", quotation.getId());
+            return;
+        }
+
+        // Validate payee has bank details
+        User payee = quotation.getCreator();
+        if (!payee.hasBankDetails()) {
+            logger.warn("Cannot create payment for quotation {} - payee {} missing bank details",
+                    quotation.getId(), payee.getFullName());
+            throw new BusinessException("MISSING_BANK_DETAILS",
+                    "Cannot create payment: Employee " + payee.getFullName() + " missing bank details");
+        }
+
+        // Create Payment entity
+        Payment payment = new Payment();
+        payment.setQuotation(quotation);
+        payment.setPayee(payee);
+        payment.setAmount(quotation.getTotalAmount());
+        payment.setCurrency(quotation.getCurrency());
+        payment.setStatus(PaymentStatus.READY_FOR_PAYMENT); // Ready for processing
+        payment.setBankName(payee.getBankName());
+        payment.setAccountNumber(payee.getAccountNumber());
+        payment.setIban(payee.getIban());
+        payment.setBeneficiaryAddress(payee.getAddress());
+        payment.setComments("Payment for quotation #" + quotation.getId() + " - " + quotation.getDescription());
+
+        // Save payment
+        Payment savedPayment = paymentRepository.save(payment);
+
+        logger.info("Payment {} created successfully for quotation {} with amount {} {}",
+                savedPayment.getId(), quotation.getId(), quotation.getTotalAmount(), quotation.getCurrency());
+    }
+
+    public ApprovalResponse quickApprove(Long quotationId, String comments) {
+        ApprovalRequest request = new ApprovalRequest();
+        request.setQuotationId(quotationId);
+        request.setAction("APPROVE");
+        request.setComments(comments);
+
+        return processApproval(request);
+    }
     /**
      * Process bulk approval decisions
      */
