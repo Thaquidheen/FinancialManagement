@@ -4,7 +4,9 @@ public enum PaymentBatchStatus {
     DRAFT("Draft", "Batch is being prepared"),
     FILE_GENERATED("File Generated", "Payment file has been generated"),
     SENT_TO_BANK("Sent to Bank", "Batch has been sent to bank"),
+    PROCESSING("Processing", "Bank is processing the payments"),
     COMPLETED("Completed", "All payments in batch are completed"),
+    FAILED("Failed", "Batch processing failed"),
     CANCELLED("Cancelled", "Batch has been cancelled");
 
     private final String displayName;

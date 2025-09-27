@@ -10,10 +10,12 @@ import com.company.erp.financial.repository.QuotationRepository;
 import com.company.erp.payment.dto.request.ConfirmPaymentRequest;
 import com.company.erp.payment.dto.request.GenerateBankFileRequest;
 import com.company.erp.payment.dto.response.BankFileResponse;
+import com.company.erp.payment.dto.response.PaymentBatchWithPaymentsResponse;
 import com.company.erp.payment.dto.response.PaymentStatusResponse;
 import com.company.erp.payment.dto.response.PaymentSummaryResponse;
 import com.company.erp.payment.entity.Payment;
 import com.company.erp.payment.entity.PaymentBatch;
+import com.company.erp.payment.entity.PaymentBatchStatus;
 import com.company.erp.payment.entity.PaymentStatus;
 import com.company.erp.payment.repository.PaymentBatchRepository;
 import com.company.erp.payment.repository.PaymentRepository;
@@ -252,6 +254,34 @@ public class PaymentService {
     }
 
     /**
+     * Get payment batches as DTO (without payments)
+     */
+    @Transactional(readOnly = true)
+    public Page<PaymentBatchWithPaymentsResponse> getPaymentBatchesAsDTO(Pageable pageable) {
+        UserPrincipal currentUser = getCurrentUser();
+        validatePaymentAccess(currentUser);
+
+        Page<PaymentBatch> batches = paymentBatchRepository.findAllWithDetails(pageable);
+        return batches.map(batch -> {
+            PaymentBatchWithPaymentsResponse dto = new PaymentBatchWithPaymentsResponse(batch);
+            dto.setPayments(null); // Don't include payments
+            return dto;
+        });
+    }
+
+    /**
+     * Get payment batches with payments included
+     */
+    @Transactional(readOnly = true)
+    public Page<PaymentBatchWithPaymentsResponse> getPaymentBatchesWithPayments(Pageable pageable) {
+        UserPrincipal currentUser = getCurrentUser();
+        validatePaymentAccess(currentUser);
+
+        Page<PaymentBatch> batches = paymentBatchRepository.findAllWithPayments(pageable);
+        return batches.map(PaymentBatchWithPaymentsResponse::new);
+    }
+
+    /**
      * Get payment statistics
      */
     @Transactional(readOnly = true)
@@ -396,6 +426,161 @@ public class PaymentService {
         }
 
         return response;
+    }
+
+    /**
+     * Mark batch as sent to bank without reference number
+     */
+    @Transactional
+    public void markBatchSentToBank(Long batchId) {
+        logger.info("Marking batch {} as sent to bank", batchId);
+
+        PaymentBatch batch = paymentBatchRepository.findById(batchId)
+                .orElseThrow(() -> new ResourceNotFoundException("PaymentBatch", "id", batchId));
+
+        if (!batch.canBeSentToBank()) {
+            throw new BusinessException("INVALID_BATCH_STATUS", 
+                    "Batch must be in FILE_GENERATED status to mark as sent to bank");
+        }
+
+        batch.markAsSentToBank(null); // No bank reference provided
+        paymentBatchRepository.save(batch);
+
+        logger.info("Batch {} marked as sent to bank", batchId);
+    }
+
+    /**
+     * Mark batch as processing
+     */
+    @Transactional
+    public void markBatchProcessing(Long batchId) {
+        logger.info("Marking batch {} as processing", batchId);
+
+        PaymentBatch batch = paymentBatchRepository.findById(batchId)
+                .orElseThrow(() -> new ResourceNotFoundException("PaymentBatch", "id", batchId));
+
+        if (batch.getStatus() != PaymentBatchStatus.SENT_TO_BANK) {
+            throw new BusinessException("INVALID_BATCH_STATUS", 
+                    "Batch must be in SENT_TO_BANK status to mark as processing");
+        }
+
+        batch.setStatus(PaymentBatchStatus.PROCESSING);
+        paymentBatchRepository.save(batch);
+
+        logger.info("Batch {} marked as processing", batchId);
+    }
+
+    /**
+     * Mark batch as completed
+     */
+    @Transactional
+    public void markBatchCompleted(Long batchId, String notes) {
+        logger.info("Marking batch {} as completed", batchId);
+
+        PaymentBatch batch = paymentBatchRepository.findById(batchId)
+                .orElseThrow(() -> new ResourceNotFoundException("PaymentBatch", "id", batchId));
+
+        if (batch.getStatus() != PaymentBatchStatus.PROCESSING && 
+            batch.getStatus() != PaymentBatchStatus.SENT_TO_BANK) {
+            throw new BusinessException("INVALID_BATCH_STATUS", 
+                    "Batch must be in PROCESSING or SENT_TO_BANK status to mark as completed");
+        }
+
+        batch.markAsCompleted();
+        if (notes != null && !notes.trim().isEmpty()) {
+            batch.setProcessingNotes(notes);
+        }
+        paymentBatchRepository.save(batch);
+
+        logger.info("Batch {} marked as completed", batchId);
+    }
+
+    /**
+     * Retry failed batch
+     */
+    @Transactional
+    public void retryBatch(Long batchId) {
+        logger.info("Retrying batch {}", batchId);
+
+        PaymentBatch batch = paymentBatchRepository.findById(batchId)
+                .orElseThrow(() -> new ResourceNotFoundException("PaymentBatch", "id", batchId));
+
+        if (batch.getStatus() != PaymentBatchStatus.FAILED) {
+            throw new BusinessException("INVALID_BATCH_STATUS", 
+                    "Only failed batches can be retried");
+        }
+
+        // Reset batch to DRAFT status for retry
+        batch.setStatus(PaymentBatchStatus.DRAFT);
+        batch.setProcessingNotes(null);
+        batch.setBankReference(null);
+        batch.setSentToBankDate(null);
+        batch.setGeneratedDate(null);
+        batch.setDownloadedDate(null);
+        batch.setFileName(null);
+        batch.setFilePath(null);
+
+        // Reset all payments in the batch
+        for (Payment payment : batch.getPayments()) {
+            payment.setStatus(PaymentStatus.PENDING);
+            payment.setPaymentDate(null);
+            payment.setBankReference(null);
+        }
+
+        paymentBatchRepository.save(batch);
+
+        logger.info("Batch {} reset for retry", batchId);
+    }
+
+    /**
+     * Update batch status manually
+     */
+    @Transactional
+    public void updateBatchStatus(Long batchId, String status) {
+        logger.info("Updating batch {} status to {}", batchId, status);
+
+        PaymentBatch batch = paymentBatchRepository.findById(batchId)
+                .orElseThrow(() -> new ResourceNotFoundException("PaymentBatch", "id", batchId));
+
+        try {
+            PaymentBatchStatus newStatus = PaymentBatchStatus.valueOf(status.toUpperCase());
+            
+            // Validate status transition
+            if (!isValidStatusTransition(batch.getStatus(), newStatus)) {
+                throw new BusinessException("INVALID_STATUS_TRANSITION", 
+                        "Cannot transition from " + batch.getStatus() + " to " + newStatus);
+            }
+
+            batch.setStatus(newStatus);
+            paymentBatchRepository.save(batch);
+
+            logger.info("Batch {} status updated to {}", batchId, newStatus);
+        } catch (IllegalArgumentException e) {
+            throw new BusinessException("INVALID_STATUS", "Invalid status: " + status);
+        }
+    }
+
+    /**
+     * Validate status transition
+     */
+    private boolean isValidStatusTransition(PaymentBatchStatus from, PaymentBatchStatus to) {
+        // Define valid transitions
+        switch (from) {
+            case DRAFT:
+                return to == PaymentBatchStatus.FILE_GENERATED || to == PaymentBatchStatus.FAILED;
+            case FILE_GENERATED:
+                return to == PaymentBatchStatus.SENT_TO_BANK || to == PaymentBatchStatus.FAILED;
+            case SENT_TO_BANK:
+                return to == PaymentBatchStatus.PROCESSING || to == PaymentBatchStatus.COMPLETED || to == PaymentBatchStatus.FAILED;
+            case PROCESSING:
+                return to == PaymentBatchStatus.COMPLETED || to == PaymentBatchStatus.FAILED;
+            case COMPLETED:
+                return false; // Cannot change from completed
+            case FAILED:
+                return to == PaymentBatchStatus.DRAFT; // Can retry
+            default:
+                return false;
+        }
     }
 
     // Statistics inner class

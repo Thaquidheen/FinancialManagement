@@ -5,6 +5,7 @@ import com.company.erp.common.exception.ResourceNotFoundException;
 import com.company.erp.payment.dto.request.ConfirmPaymentRequest;
 import com.company.erp.payment.dto.request.GenerateBankFileRequest;
 import com.company.erp.payment.dto.response.BankFileResponse;
+import com.company.erp.payment.dto.response.PaymentBatchWithPaymentsResponse;
 import com.company.erp.payment.dto.response.PaymentSummaryResponse;
 import com.company.erp.payment.entity.PaymentBatch;
 import com.company.erp.payment.entity.PaymentStatus;
@@ -183,6 +184,129 @@ public class PaymentController {
         return ResponseEntity.ok(response);
     }
 
+    @Operation(summary = "Mark batch as sent to bank",
+            description = "Mark payment batch as sent to bank without reference number")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Batch marked as sent to bank"),
+            @ApiResponse(responseCode = "400", description = "Invalid batch status"),
+            @ApiResponse(responseCode = "404", description = "Payment batch not found"),
+            @ApiResponse(responseCode = "403", description = "Access denied")
+    })
+    @PostMapping("/batches/{batchId}/mark-sent-to-bank")
+    @PreAuthorize("hasAuthority('ACCOUNT_MANAGER') or hasAuthority('SUPER_ADMIN')")
+    public ResponseEntity<Map<String, String>> markBatchSentToBank(
+            @Parameter(description = "Payment Batch ID") @PathVariable Long batchId) {
+
+        logger.info("Marking batch {} as sent to bank", batchId);
+
+        paymentService.markBatchSentToBank(batchId);
+
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Batch marked as sent to bank");
+        response.put("batchId", batchId.toString());
+
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Mark batch as processing",
+            description = "Mark payment batch as processing by bank")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Batch marked as processing"),
+            @ApiResponse(responseCode = "400", description = "Invalid batch status"),
+            @ApiResponse(responseCode = "404", description = "Payment batch not found"),
+            @ApiResponse(responseCode = "403", description = "Access denied")
+    })
+    @PostMapping("/batches/{batchId}/mark-processing")
+    @PreAuthorize("hasAuthority('ACCOUNT_MANAGER') or hasAuthority('SUPER_ADMIN')")
+    public ResponseEntity<Map<String, String>> markBatchProcessing(
+            @Parameter(description = "Payment Batch ID") @PathVariable Long batchId) {
+
+        logger.info("Marking batch {} as processing", batchId);
+
+        paymentService.markBatchProcessing(batchId);
+
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Batch marked as processing");
+        response.put("batchId", batchId.toString());
+
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Mark batch as completed",
+            description = "Mark payment batch as completed")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Batch marked as completed"),
+            @ApiResponse(responseCode = "400", description = "Invalid batch status"),
+            @ApiResponse(responseCode = "404", description = "Payment batch not found"),
+            @ApiResponse(responseCode = "403", description = "Access denied")
+    })
+    @PostMapping("/batches/{batchId}/mark-completed")
+    @PreAuthorize("hasAuthority('ACCOUNT_MANAGER') or hasAuthority('SUPER_ADMIN')")
+    public ResponseEntity<Map<String, String>> markBatchCompleted(
+            @Parameter(description = "Payment Batch ID") @PathVariable Long batchId,
+            @RequestParam(required = false) String notes) {
+
+        logger.info("Marking batch {} as completed", batchId);
+
+        paymentService.markBatchCompleted(batchId, notes);
+
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Batch marked as completed");
+        response.put("batchId", batchId.toString());
+
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Retry failed batch",
+            description = "Reset failed batch for retry")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Batch reset for retry"),
+            @ApiResponse(responseCode = "400", description = "Invalid batch status"),
+            @ApiResponse(responseCode = "404", description = "Payment batch not found"),
+            @ApiResponse(responseCode = "403", description = "Access denied")
+    })
+    @PostMapping("/batches/{batchId}/retry")
+    @PreAuthorize("hasAuthority('ACCOUNT_MANAGER') or hasAuthority('SUPER_ADMIN')")
+    public ResponseEntity<Map<String, String>> retryBatch(
+            @Parameter(description = "Payment Batch ID") @PathVariable Long batchId) {
+
+        logger.info("Retrying batch {}", batchId);
+
+        paymentService.retryBatch(batchId);
+
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Batch reset for retry");
+        response.put("batchId", batchId.toString());
+
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Update batch status",
+            description = "Manually update batch status")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Batch status updated"),
+            @ApiResponse(responseCode = "400", description = "Invalid status transition"),
+            @ApiResponse(responseCode = "404", description = "Payment batch not found"),
+            @ApiResponse(responseCode = "403", description = "Access denied")
+    })
+    @PutMapping("/batches/{batchId}/status")
+    @PreAuthorize("hasAuthority('ACCOUNT_MANAGER') or hasAuthority('SUPER_ADMIN')")
+    public ResponseEntity<Map<String, String>> updateBatchStatus(
+            @Parameter(description = "Payment Batch ID") @PathVariable Long batchId,
+            @RequestParam String status) {
+
+        logger.info("Updating batch {} status to {}", batchId, status);
+
+        paymentService.updateBatchStatus(batchId, status);
+
+        Map<String, String> response = new HashMap<>();
+        response.put("message", "Batch status updated");
+        response.put("batchId", batchId.toString());
+        response.put("status", status);
+
+        return ResponseEntity.ok(response);
+    }
+
     @Operation(summary = "Get payments ready for processing",
             description = "Get paginated list of payments ready for bank file generation")
     @ApiResponses(value = {
@@ -265,18 +389,21 @@ public class PaymentController {
     })
     @GetMapping("/batches")
     @PreAuthorize("hasAuthority('ACCOUNT_MANAGER') or hasAuthority('SUPER_ADMIN')")
-    public ResponseEntity<Page<PaymentBatch>> getPaymentBatches(
+    public ResponseEntity<Page<PaymentBatchWithPaymentsResponse>> getPaymentBatches(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "createdDate") String sortBy,
-            @RequestParam(defaultValue = "desc") String sortDir) {
+            @RequestParam(defaultValue = "desc") String sortDir,
+            @RequestParam(defaultValue = "false") boolean includePayments) {
 
-        logger.debug("Fetching payment batches - page: {}, size: {}", page, size);
+        logger.debug("Fetching payment batches - page: {}, size: {}, includePayments: {}", page, size, includePayments);
 
         Sort sort = sortDir.equalsIgnoreCase("desc") ? Sort.by(sortBy).descending() : Sort.by(sortBy).ascending();
         Pageable pageable = PageRequest.of(page, size, sort);
 
-        Page<PaymentBatch> batches = paymentService.getPaymentBatches(pageable);
+        Page<PaymentBatchWithPaymentsResponse> batches = includePayments ? 
+            paymentService.getPaymentBatchesWithPayments(pageable) : 
+            paymentService.getPaymentBatchesAsDTO(pageable);
 
         return ResponseEntity.ok(batches);
     }
