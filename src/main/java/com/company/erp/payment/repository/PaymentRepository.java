@@ -46,6 +46,10 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     // Find payments by batch
     List<Payment> findByBatchIdAndActiveTrue(Long batchId);
 
+    // Find payments by batch with quotation and project details for serialization
+    @Query("SELECT p FROM Payment p LEFT JOIN FETCH p.quotation q LEFT JOIN FETCH q.project pr LEFT JOIN FETCH pr.manager WHERE p.batch.id = :batchId AND p.active = true")
+    List<Payment> findByBatchIdWithDetails(@Param("batchId") Long batchId);
+
     // Count payments by status
     @Query("SELECT COUNT(p) FROM Payment p WHERE p.status = :status AND p.active = true")
     long countByStatus(@Param("status") PaymentStatus status);

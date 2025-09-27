@@ -277,8 +277,19 @@ public class PaymentService {
         UserPrincipal currentUser = getCurrentUser();
         validatePaymentAccess(currentUser);
 
+        // Get batches without payments first to avoid Hibernate pagination issues
         Page<PaymentBatch> batches = paymentBatchRepository.findAllWithPayments(pageable);
-        return batches.map(PaymentBatchWithPaymentsResponse::new);
+        
+        // Convert to DTOs and fetch payments separately for each batch
+        return batches.map(batch -> {
+            PaymentBatchWithPaymentsResponse dto = new PaymentBatchWithPaymentsResponse(batch);
+            
+            // Fetch payments for this specific batch with all related entities
+            List<Payment> payments = paymentRepository.findByBatchIdWithDetails(batch.getId());
+            dto.setPayments(payments);
+            
+            return dto;
+        });
     }
 
     /**

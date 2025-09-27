@@ -39,7 +39,7 @@ public class PaymentBatch extends AuditableEntity {
     private PaymentBatchStatus status = PaymentBatchStatus.DRAFT;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "creator_id", nullable = false)
+    @JoinColumn(name = "created_by_user_id", nullable = false)
     private User creator;
 
     @Column(name = "file_name", length = 200)

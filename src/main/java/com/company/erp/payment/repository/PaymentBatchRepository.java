@@ -34,8 +34,8 @@ public interface PaymentBatchRepository extends JpaRepository<PaymentBatch, Long
     @Query("SELECT b FROM PaymentBatch b LEFT JOIN FETCH b.creator WHERE b.active = true")
     Page<PaymentBatch> findAllWithDetails(Pageable pageable);
 
-    // Find all with payments - eagerly fetch creator, payments, quotations, and projects for batch actions
-    @Query("SELECT DISTINCT b FROM PaymentBatch b LEFT JOIN FETCH b.creator LEFT JOIN FETCH b.payments p LEFT JOIN FETCH p.quotation q LEFT JOIN FETCH q.project pr LEFT JOIN FETCH pr.manager WHERE b.active = true")
+    // Find all with payments - use separate queries to avoid Hibernate pagination issues
+    @Query("SELECT DISTINCT b FROM PaymentBatch b LEFT JOIN FETCH b.creator WHERE b.active = true")
     Page<PaymentBatch> findAllWithPayments(Pageable pageable);
 
     // Find batches ready for download - eagerly fetch creator to avoid LazyInitializationException

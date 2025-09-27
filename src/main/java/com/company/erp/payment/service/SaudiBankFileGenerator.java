@@ -151,12 +151,16 @@ public class SaudiBankFileGenerator {
         nameCell.setCellValue(employeeName != null ? employeeName : "");
         nameCell.setCellStyle(textStyle);
 
-        // Column F: National ID/Iqama ID
+        // Column F: National ID/Iqama ID (or username/email as fallback)
         Cell idCell = row.createCell(colNum++);
-        String nationalId = payment.getPayee().getNationalId() != null ?
+        String identifier = payment.getPayee().getNationalId() != null ?
                            payment.getPayee().getNationalId() : 
-                           payment.getPayee().getIqamaId();
-        idCell.setCellValue(nationalId != null ? nationalId : "");
+                           (payment.getPayee().getIqamaId() != null ?
+                            payment.getPayee().getIqamaId() :
+                            (payment.getPayee().getUsername() != null ?
+                             payment.getPayee().getUsername() :
+                             payment.getPayee().getEmail()));
+        idCell.setCellValue(identifier != null ? identifier : "");
         idCell.setCellStyle(textStyle);
 
         // Column G: Beneficiary Address
@@ -217,8 +221,12 @@ public class SaudiBankFileGenerator {
                 errors.add("Account number or IBAN is required");
             }
             
-            if (payment.getPayee().getNationalId() == null && payment.getPayee().getIqamaId() == null) {
-                errors.add("National ID or Iqama ID is required");
+            // Check for any valid identification (National ID, Iqama ID, or at least username/email)
+            if (payment.getPayee().getNationalId() == null && 
+                payment.getPayee().getIqamaId() == null &&
+                (payment.getPayee().getUsername() == null || payment.getPayee().getUsername().trim().isEmpty()) &&
+                (payment.getPayee().getEmail() == null || payment.getPayee().getEmail().trim().isEmpty())) {
+                errors.add("National ID, Iqama ID, or valid username/email is required");
             }
         }
         
